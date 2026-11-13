@@ -45,7 +45,7 @@ The full guide, including every check the generator runs, is in [docs/HOW_IT_WOR
 | `src/generator_template.html` | The generator's source, before the sample plan is embedded |
 | `scripts/` | `build_plan.py` builds the workbook, `recalc.py` fills in its formula results, `build_generator.py` builds `index.html`, `export_examples.js` refreshes `examples/`, `make_test_assets.py` makes the test images and videos |
 | `tests/` | Automated browser tests, with a fictional plan, a fictional Editor export and stamped TEST creative files |
-| `docs/` | How it works, and how the AI was steered (and corrected) while building it |
+| `docs/` | How it works: every check the generator runs, setup, troubleshooting |
 
 ## Proof it runs, without a live ad account
 
@@ -60,7 +60,7 @@ The assessment account isn't real and I can't sign in to a Meta or Google Ads ac
   - the plan template round-trips (uploading the .xlsx gives the same result as the built-in sample)
   - Stage 2 of PMax stays locked until the checklist is done
   - a wrongly spelled campaign name, and an image in the wrong shape, are both caught
-- **The tests can fail.** Putting the old budget bug back (Google ÷ 31) makes two tests fail.
+- **The tests can fail.** Changing the Google budget rule to ÷ 31 makes two tests fail.
 - **Example output** is in `examples/`.
 
 **Not yet verified:** a few column spellings only a real import confirms (listed in the guide). The first real launch should be a draft import reviewed in Editor's preview before anything is posted.
@@ -82,10 +82,6 @@ python3 scripts/recalc.py plan/Campaign_Plan_Dec2026.xlsx
 python3 scripts/build_generator.py   # writes index.html
 npm test
 ```
-
-## Built with AI, steered by a person
-
-This was built with Claude in a plan → discuss → approve → build loop. [docs/WHAT_THE_AI_GOT_WRONG.md](docs/WHAT_THE_AI_GOT_WRONG.md) lists where the AI was wrong or overstated something, and how each one was caught.
 
 ## Placeholders
 

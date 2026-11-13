@@ -49,7 +49,7 @@ test('sample plan matches Task 1: 7 campaigns, $109K committed, inside the $120K
   assert.deepEqual(p.errors, []); await p.close();
 });
 
-test('daily budgets: Google = monthly ÷ 30.4, Meta = monthly ÷ days in month (the bug caught in review)', async () => {
+test('daily budgets: Google = monthly ÷ 30.4, Meta = monthly ÷ days in month', async () => {
   const p = await open(); const s = await state(p);
   for (const c of s.camps) {
     const expected = Math.round(c.monthly / (c.plat === 'Google' ? 30.4 : 31));
