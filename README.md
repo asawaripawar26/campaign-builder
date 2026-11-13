@@ -17,6 +17,8 @@ plan workbook (.xlsx) ──► generator (index.html, runs in your browser) ─
 
 The sample plan is the December build from Task 1 of the assessment: 7 campaigns plus an $11K Meta reserve, $120K in total.
 
+After launch, the [performance workbook](performance/) judges the results: it checks platform numbers against PostHog, shows how much evidence each result has, and recommends scale, reduce or pause.
+
 ## Next launch in 5 steps
 
 1. **Copy the plan.** Download [`plan/Campaign_Plan_Dec2026.xlsx`](plan/Campaign_Plan_Dec2026.xlsx) (or last month's copy). On the *Settings* tab, change the month code and the start and end dates.
@@ -45,6 +47,7 @@ The full guide, including every check the generator runs, is in [docs/HOW_IT_WOR
 | `src/generator_template.html` | The generator's source, before the sample plan is embedded |
 | `scripts/` | `build_plan.py` builds the workbook, `recalc.py` fills in its formula results, `build_generator.py` builds `index.html`, `export_examples.js` refreshes `examples/`, `make_test_assets.py` makes the test images and videos |
 | `tests/` | Automated browser tests, with a fictional plan, a fictional Editor export and stamped TEST creative files |
+| `performance/` | The performance workbook: judges results after launch and recommends scale, reduce or pause ([how it works](performance/README.md)) |
 | `docs/` | How it works: every check the generator runs, setup, troubleshooting |
 
 ## Proof it runs, without a live ad account
@@ -70,7 +73,8 @@ The assessment account isn't real and I can't sign in to a Meta or Google Ads ac
 ```bash
 npm install
 npx playwright install chromium
-npm test
+npm test                              # generator
+python3 tests/test_performance.py     # performance workbook (needs openpyxl; LibreOffice for the full recalculation)
 ```
 
 ### Rebuild after changing the plan or the generator

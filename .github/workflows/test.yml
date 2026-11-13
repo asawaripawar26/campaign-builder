@@ -40,3 +40,14 @@ jobs:
                              "CreativeTest": 10000, "RT14d": 4000, "PMax": 12000}, budgets
           print("plan OK:", sum(budgets.values()), "committed")
           PY
+  performance:
+    name: Performance workbook recalculates and makes the right calls
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openpyxl
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-calc
+      - run: python3 tests/test_performance.py
