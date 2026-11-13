@@ -1,0 +1,42 @@
+name: Tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  generator:
+    name: Generator in a real browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+  plan:
+    name: Plan workbook builds from code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openpyxl
+      - run: python3 scripts/build_plan.py
+      - name: Check the rebuilt plan has every tab and the Task 1 budgets
+        run: |
+          python3 - <<'PY'
+          from openpyxl import load_workbook
+          wb = load_workbook("plan/Campaign_Plan_Dec2026.xlsx")
+          need = ["Settings","Campaigns","Budget","Concepts","Claims","Creative_Library","Google_Keywords","Google_Negatives",
+                  "Google_RSAs","PMax_AssetGroups","PMax_Signals","Meta_AdSets","Meta_Ads","Variants"]
+          missing = [t for t in need if t not in wb.sheetnames]
+          assert not missing, missing
+          ws = wb["Campaigns"]
+          budgets = {r[2]: r[9] for r in ws.iter_rows(min_row=2, values_only=True) if r[2]}
+          assert budgets == {"Brand": 9000, "NonBrand": 29000, "CompTest": 5000, "AdvPlus": 40000,
+                             "CreativeTest": 10000, "RT14d": 4000, "PMax": 12000}, budgets
+          print("plan OK:", sum(budgets.values()), "committed")
+          PY

@@ -1,0 +1,802 @@
+<title>Campaign Build Generator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: control-room tool — inputs strip, summary band, structure | checks, PMax deployment, file check, sticky export bar */
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --ink:#152036; --muted:#5A6479; --line:#DADFE8; --soft:#EBEEF4;
+  --accent:#2C55E0; --accent-ink:#FFFFFF; --meta:#3B6CF6; --google:#1E9E6A; --pmax:#8A5CF5; --reserve:#A6AEBF;
+  --err:#C0392B; --err-bg:#FBE9E7; --warn:#9A6A0B; --warn-bg:#FDF3DC; --ok:#237A4B; --ok-bg:#E3F4EA;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1320; --surface:#151C2B; --ink:#E4E9F2; --muted:#98A2B6; --line:#283248; --soft:#1C2537;
+  --accent:#7D9BFF; --accent-ink:#0E1320; --meta:#7D9BFF; --google:#4FC796; --pmax:#B79BFF; --reserve:#5D6880;
+  --err:#F2776B; --err-bg:#3A1D1D; --warn:#E8B85A; --warn-bg:#3A2E15; --ok:#5CC98D; --ok-bg:#183326; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1320; --surface:#151C2B; --ink:#E4E9F2; --muted:#98A2B6; --line:#283248; --soft:#1C2537;
+  --accent:#7D9BFF; --accent-ink:#0E1320; --meta:#7D9BFF; --google:#4FC796; --pmax:#B79BFF; --reserve:#5D6880;
+  --err:#F2776B; --err-bg:#3A1D1D; --warn:#E8B85A; --warn-bg:#3A2E15; --ok:#5CC98D; --ok-bg:#183326; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 140px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+h3{font-size:14px;margin:0 0 6px}
+.sub{color:var(--muted);margin:2px 0 0}
+.src{font-family:var(--mono);font-size:12px;background:var(--soft);border:1px solid var(--line);padding:2px 8px;border-radius:4px}
+.inputs{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:6px;cursor:pointer;display:inline-block;text-decoration:none}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.band{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px}
+.bars{display:grid;gap:12px}
+.barhead{display:flex;justify-content:space-between;gap:8px;font-size:13px;flex-wrap:wrap}
+.barhead b{font-variant-numeric:tabular-nums}
+.bar{display:flex;height:12px;border-radius:3px;overflow:hidden;background:var(--soft);margin-top:4px}
+.bar span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.checks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chk{border-radius:6px;padding:10px;display:grid;gap:2px}
+.chk b{font-size:22px;font-variant-numeric:tabular-nums;line-height:1.1}
+.chk span{font-size:12px}
+.chk.e{background:var(--err-bg);color:var(--err)} .chk.w{background:var(--warn-bg);color:var(--warn)} .chk.o{background:var(--ok-bg);color:var(--ok)}
+.ev{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
+.ev b{font-variant-numeric:tabular-nums;text-align:right}
+.verdict{margin-top:8px;font-size:12.5px;padding:8px;border-radius:6px;background:var(--warn-bg);color:var(--warn)}
+.verdict.ok{background:var(--ok-bg);color:var(--ok)}
+.main{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
+.tree details{border-left:2px solid var(--line);margin:4px 0 4px 2px;padding-left:10px}
+.tree summary{cursor:pointer;padding:3px 0;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;list-style:none}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary::before{content:"▸";color:var(--muted);font-size:11px}
+.tree details[open]>summary::before{content:"▾"}
+.tag{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:3px;font-weight:500;color:var(--bg)}
+.tag.g{background:var(--google)} .tag.m{background:var(--meta)} .tag.p{background:var(--pmax)}
+.nm{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+.meta{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.leaf{font-size:12.5px;padding:2px 0 2px 18px;color:var(--muted);word-break:break-word}
+.leaf b{color:var(--ink);font-weight:500}
+.pills{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.pill{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:3px 10px;border-radius:99px;cursor:pointer}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.issues{display:grid;gap:6px;max-height:620px;overflow:auto}
+.iss{display:grid;grid-template-columns:auto 1fr;gap:8px;font-size:13px;padding:8px 10px;border-radius:6px;background:var(--soft)}
+.iss .lv{font-family:var(--mono);font-size:11px;font-weight:500;padding:1px 6px;border-radius:3px;height:fit-content;white-space:nowrap}
+.iss.error .lv{background:var(--err-bg);color:var(--err)} .iss.warn .lv{background:var(--warn-bg);color:var(--warn)} .iss.skip .lv{background:var(--line);color:var(--muted)} .iss.hold .lv{background:var(--surface);border:1px solid var(--warn);color:var(--warn)}
+.iss .where{font-family:var(--mono);font-size:11.5px;color:var(--muted);word-break:break-all}
+.empty{color:var(--muted);font-size:13px;padding:8px 0}
+.stages{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stage{border:1px solid var(--line);border-radius:6px;padding:12px;display:grid;gap:8px;align-content:start;min-width:0}
+.stage ul{margin:0;padding-left:18px;font-size:12.5px;display:grid;gap:3px}
+.stage label{display:flex;gap:8px;font-size:12.5px;align-items:flex-start;cursor:pointer}
+.stage input{margin-top:3px;accent-color:var(--accent)}
+.gate{font-size:12px;padding:6px 8px;border-radius:5px;background:var(--err-bg);color:var(--err)}
+.gate.ok{background:var(--ok-bg);color:var(--ok)}
+.how ol{margin:0;padding-left:20px;display:grid;gap:6px;max-width:82ch}
+.how code{font-family:var(--mono);font-size:12px;background:var(--soft);padding:1px 4px;border-radius:3px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;max-height:420px}
+table{border-collapse:collapse;font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{position:sticky;top:0;background:var(--soft)}
+td.bad{color:var(--err)} td.okc{color:var(--ok)} td.wn{color:var(--warn)}
+.exportbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.exportin{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.toggle{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer;margin-right:auto}
+.toggle input{width:16px;height:16px;accent-color:var(--accent)}
+#msg{font-size:12.5px;color:var(--muted);flex-basis:100%}
+textarea{width:100%;min-height:140px;font-family:var(--mono);font-size:11px;background:var(--soft);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+@media (max-width:980px){.band{grid-template-columns:1fr 1fr}.stages{grid-template-columns:1fr}}
+@media (max-width:860px){.band,.main{grid-template-columns:1fr}}
+@media (max-width:420px){.chk b{font-size:18px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Campaign Build Generator</h1>
+      <p class="sub">Plan in → checked, paused, import-ready files out. <span class="src" id="srcLabel">Sample plan · Dec 2026</span> <span class="src" id="acctLabel">No account export</span> <span class="src" id="filesLabel">No creative files</span></p>
+    </div>
+    <div class="inputs">
+      <button class="btn" id="sampleBtn" type="button">Load sample plan</button>
+      <a class="btn" id="tplLink" href="plan/Campaign_Plan_Dec2026.xlsx" download>Download plan template</a>
+      <label class="btn primary" for="fileIn">Upload plan (.xlsx)</label><input id="fileIn" type="file" accept=".xlsx,.xls" hidden>
+      <label class="btn" for="acctIn">Google Ads Editor export</label><input id="acctIn" type="file" accept=".csv,.txt,.tsv" hidden>
+      <label class="btn" for="creaIn">Creative files</label><input id="creaIn" type="file" accept="image/*,video/mp4,video/quicktime,.mp4,.mov" multiple hidden>
+    </div>
+  </header>
+
+  <section class="band">
+    <div class="panel">
+      <h2>Budget vs. brief (monthly)</h2>
+      <div class="bars" id="bars"></div>
+      <div class="legend"><span><i style="background:var(--meta)"></i>Meta</span><span><i style="background:var(--google)"></i>Google Search</span><span><i style="background:var(--pmax)"></i>PMax</span><span><i style="background:var(--reserve)"></i>Reserve (not built)</span></div>
+    </div>
+    <div class="panel">
+      <h2>Checks</h2>
+      <div class="checks" id="checks"></div>
+      <p class="meta" id="counts" style="margin:10px 0 0"></p>
+    </div>
+    <div class="panel">
+      <h2>Creative test: expected evidence</h2>
+      <div class="ev" id="evidence"></div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+  </section>
+
+  <section class="main">
+    <div class="panel tree"><h2>Structure</h2><div id="tree"></div></div>
+    <div class="panel">
+      <h2>What to fix</h2>
+      <p class="meta" style="margin:-4px 0 8px">ERROR blocks that platform's file. HELD BACK leaves out only the item named (a whole concept in the creative test, so it stays balanced). PMax is all-or-nothing.</p>
+      <div class="pills" role="group" aria-label="Filter issues">
+        <button class="pill" data-f="all" aria-pressed="true" type="button">All</button>
+        <button class="pill" data-f="error" aria-pressed="false" type="button">Errors</button>
+        <button class="pill" data-f="hold" aria-pressed="false" type="button">Held back</button>
+        <button class="pill" data-f="warn" aria-pressed="false" type="button">Warnings</button>
+        <button class="pill" data-f="skip" aria-pressed="false" type="button">Draft only</button>
+      </div>
+      <div class="issues" id="issues"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="pmaxPanel">
+    <h2>PMax: edit the live campaign in two stages</h2>
+    <div class="gate" id="pmaxGate"></div>
+    <div class="stages" style="margin-top:12px">
+      <div class="stage">
+        <h3>Stage 1 · add new asset groups (Paused)</h3>
+        <ul id="s1list"></ul>
+        <button class="btn primary" id="s1Btn" type="button">Download Stage 1 file</button>
+      </div>
+      <div class="stage">
+        <h3>Before Stage 2 · manual checks</h3>
+        <label><input type="checkbox" class="ck" id="ck0"><span><b>Stage 1 preview (acceptance test):</b> the existing campaign is updated, no new campaign appears, its status is unchanged, existing asset groups are untouched, and the 3 new groups are listed as new.</span></label>
+        <label><input type="checkbox" class="ck" id="ck1"><span>Stage 1 posted. Images, logos and videos attached to each new asset group (list below).</span></label>
+        <label><input type="checkbox" class="ck" id="ck2"><span>New asset groups' assets show <b>Approved</b>, not "Under review".</span></label>
+        <label><input type="checkbox" class="ck" id="ck3"><span>Brand exclusion applied to the campaign (Google Ads → campaign settings).</span></label>
+        <label><input type="checkbox" class="ck" id="ck4"><span>Conversion goals unchanged; trial signup still the primary goal.</span></label>
+        <p class="meta" style="margin:0">These are your confirmations. The generator can't see them.</p>
+      </div>
+      <div class="stage">
+        <h3>Stage 2 · controlled switch (one post)</h3>
+        <ul id="s2list"></ul>
+        <button class="btn primary" id="s2Btn" type="button">Download Stage 2 file</button>
+        <p class="meta" style="margin:0">Record after posting (not gating):</p>
+        <label><input type="checkbox" id="pk1"><span>Preview showed only the budget and asset-group status changes; campaign status unchanged.</span></label>
+        <label><input type="checkbox" id="pk2"><span>Campaign Enabled, new groups Eligible, old groups Paused, budget correct.</span></label>
+        <label><input type="checkbox" id="pk3"><span>If the overlap fallback was used: spend split between old and new groups watched daily until the old ones are paused.</span></label>
+        <p class="meta" style="margin:0">A successful import isn't proof: the Editor preview is. If it proposes a new campaign at any point, stop.</p>
+      </div>
+    </div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Assets to attach per asset group <span class="meta" id="attachCount"></span></summary>
+      <div class="tablewrap" style="margin-top:8px"><table id="attachTable"></table></div></details>
+  </section>
+
+  <details class="panel" id="filePanel">
+    <summary style="cursor:pointer;font-weight:600">Creative file check <span class="meta" id="fileCount"></span></summary>
+    <p class="meta">Files are read in your browser only (size, shape, video length). Nothing is uploaded.</p>
+    <div class="tablewrap"><table id="fileTable"></table></div>
+  </details>
+
+  <details class="panel"><summary style="cursor:pointer;font-weight:600">Google Search file preview <span class="meta" id="gCount"></span></summary>
+    <div class="tablewrap" style="margin-top:10px"><table id="gTable"></table></div></details>
+  <details class="panel"><summary style="cursor:pointer;font-weight:600">Meta file preview <span class="meta" id="mCount"></span></summary>
+    <div class="tablewrap" style="margin-top:10px"><table id="mTable"></table></div></details>
+
+  <details class="panel how">
+    <summary style="cursor:pointer;font-weight:600">How the generator works</summary>
+    <ol style="margin-top:10px">
+      <li><b>Read and recalculate.</b> Tabs are read by header name. Names and daily budgets are rebuilt here: Google daily = monthly ÷ 30.4 (Google's monthly cap), Meta daily = monthly ÷ days in month.</li>
+      <li><b>Concepts are the hub.</b> Every ad, test variant and PMax asset group points at a Concept ID. The concept supplies the landing page and CTA, and its status and claims decide whether it may export.</li>
+      <li><b>Claims and status gates.</b> A concept that makes a claim exports only when its claim is Approved with a source, an approver and a date. Test ad sets accept "Ready for testing" or "Testing" concepts. Retired never exports.</li>
+      <li><b>Creative mapping.</b> Files come from Creative_Library by concept, execution (version) and shape: 4:5 (else 1:1) for Meta Feed, 1.91:1, 1:1 and 4:5 images, logos and videos for PMax. A library change affects the next export only.</li>
+      <li><b>Variant matrix.</b> For each test concept, every Hook × every Headline becomes an ad named <code>CONCEPT_execution_hook_headline</code>. Evidence is estimated per concept, per hook and per ad, so nobody mistakes 3 trials for a verdict.</li>
+      <li><b>PMax in place.</b> The Editor export proves the campaign exists exactly once, that the asset groups to pause exist, and that new names don't collide. Campaign rows carry only the name and budget: blank fields mean "no change" to Editor, so bidding, targeting and tracking settings are left alone. Column names are matched to your export's own spelling.</li>
+      <li><b>Draft export</b> leaves out rows with <code>{{placeholders}}</code> or unapproved claims, and lets TEST files through, for a dry-run import. Never launch a draft.</li>
+    </ol>
+  </details>
+
+  <details class="panel" id="pasteWrap" hidden>
+    <summary style="cursor:pointer;font-weight:600">Text version (if downloads are blocked)</summary>
+    <p class="meta">Paste into a spreadsheet and save as CSV, or paste into Google Ads Editor → Account → Import → Paste text.</p>
+    <textarea id="pasteBox" readonly aria-label="Import text"></textarea>
+  </details>
+</div>
+
+<div class="exportbar"><div class="exportin">
+  <label class="toggle"><input type="checkbox" id="draft"><span>Draft export (dry run: skips placeholder rows, allows TEST files)</span></label>
+  <button class="btn primary" id="gBtn" type="button">Google Search CSV</button>
+  <button class="btn primary" id="mBtn" type="button">Meta CSV</button>
+  <button class="btn" id="mapBtn" type="button" title="Paste into IN_AdMap in the performance workbook">Ad map for reporting</button>
+  <div id="msg" role="status"></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const SAMPLE = {"Settings": [{"Setting": "Brand name", "Value": "AgentStack", "Note": "PLACEHOLDER — inferred from ad name 'Static_AgentStack_Benefits'"}, {"Setting": "Landing domain", "Value": "https://www.example.com", "Note": "PLACEHOLDER — replace with the real site"}, {"Setting": "Month code", "Value": "202612", "Note": "Used in campaign names (YYYYMM)"}, {"Setting": "Days in month", "Value": 31, "Note": "Daily budget = monthly ÷ this"}, {"Setting": "Start date", "Value": "2026-12-01", "Note": ""}, {"Setting": "End date", "Value": "2026-12-31", "Note": ""}, {"Setting": "Default status", "Value": "Paused", "Note": "Nothing spends until you switch it on"}, {"Setting": "Currency", "Value": "USD", "Note": ""}, {"Setting": "Meta utm_source", "Value": "facebook", "Note": "Matches PostHog history — don't change"}, {"Setting": "Meta utm_medium", "Value": "paid_social", "Note": ""}, {"Setting": "Google utm_source", "Value": "google", "Note": "Matches PostHog history — don't change"}, {"Setting": "Google utm_medium", "Value": "cpc", "Note": ""}, {"Setting": "Target trial CPA – low", "Value": 250, "Note": "From brief"}, {"Setting": "Target trial CPA – high", "Value": 280, "Note": "From brief"}, {"Setting": "Meta platform budget", "Value": 65000, "Note": "From brief"}, {"Setting": "Google platform budget", "Value": 55000, "Note": "From brief"}, {"Setting": "Meta conditional reserve (not built)", "Value": 11000, "Note": "Released only when gates on Budget tab are met"}, {"Setting": "Google PMax US – existing (not built)", "Value": 0, "Note": "v2: PMax is now edited in place from the Campaigns tab, so nothing sits outside the build"}, {"Setting": "Facebook Page ID", "Value": "{{FB_PAGE_ID}}", "Note": "Copy from an Ads Manager export (Link Object ID column), e.g. o:1234567890"}, {"Setting": "Instagram account ID", "Value": "{{IG_ACCOUNT_ID}}", "Note": "Copy from an Ads Manager export (Instagram Account ID column)"}, {"Setting": "Meta Pixel ID", "Value": "{{META_PIXEL_ID}}", "Note": "Events Manager → your pixel → ID"}, {"Setting": "Target CPA for planning", "Value": 265, "Note": "Midpoint of the target range; used for test evidence maths"}, {"Setting": "Max test concepts per month", "Value": 3, "Note": "Agreed default: judge concepts, not individual ads"}, {"Setting": "Min trials to declare a winner", "Value": 20, "Note": "Below this a concept is 'inconclusive', not 'failed'"}, {"Setting": "Early-cut window (days)", "Value": 7, "Note": "Early signals (CTR, cost per landing-page view, hook rate) may pause clear losers only"}, {"Setting": "Google tracking verified on", "Value": "", "Note": "Date someone confirmed Google conversions fire on the v3 signup flow. PMax export is BLOCKED while empty"}, {"Setting": "Meta tracking verified on", "Value": "", "Note": "Date someone confirmed Pixel + Conversions API fire and de-duplicate on v3. Meta export warns while empty"}, {"Setting": "PMax business name", "Value": "AgentStack", "Note": "PLACEHOLDER — max 25 characters"}, {"Setting": "Google billing days per month", "Value": 30.4, "Note": "Google caps monthly spend at daily budget × 30.4, so Google daily = monthly ÷ 30.4. Meta uses Days in month."}], "Campaigns": [{"Platform": "Google", "Funnel": "BRAND", "Key": "Brand", "Geo": "US", "Campaign name": "GOOG_BRAND_Brand_US_202612", "Campaign type": "Search", "Objective": "Leads", "Bid strategy": "Maximize conversions", "Target CPA ($)": "", "Monthly budget ($)": 9000, "Daily budget ($)": 296, "Budget level": "Campaign", "Conversion event": "Trial signup", "Start date": "2026-12-01", "End date": "2026-12-31", "Locations": "United States", "Languages": "English", "Status": "Paused", "Notes": "Capped: much brand demand exists anyway. Watch impression share.", "Existing campaign name (edit in place)": ""}, {"Platform": "Google", "Funnel": "NONBRAND", "Key": "NonBrand", "Geo": "US", "Campaign name": "GOOG_NONBRAND_NonBrand_US_202612", "Campaign type": "Search", "Objective": "Leads", "Bid strategy": "Target CPA", "Target CPA ($)": 290, "Monthly budget ($)": 29000, "Daily budget ($)": 954, "Budget level": "Campaign", "Conversion event": "Trial signup", "Start date": "2026-12-01", "End date": "2026-12-31", "Locations": "United States", "Languages": "English", "Status": "Paused", "Notes": "$29K is a ceiling, not a target. Start tCPA near the $292 history, step toward $260.", "Existing campaign name (edit in place)": ""}, {"Platform": "Google", "Funnel": "TEST", "Key": "CompTest", "Geo": "US", "Campaign name": "GOOG_TEST_CompTest_US_202612", "Campaign type": "Search", "Objective": "Leads", "Bid strategy": "Maximize conversions", "Target CPA ($)": "", "Monthly budget ($)": 5000, "Daily budget ($)": 164, "Budget level": "Campaign", "Conversion event": "Trial signup", "Start date": "2026-12-01", "End date": "2026-12-31", "Locations": "United States", "Languages": "English", "Status": "Paused", "Notes": "High-intent comparison/competitor terms only.", "Existing campaign name (edit in place)": ""}, {"Platform": "Meta", "Funnel": "PROS", "Key": "AdvPlus", "Geo": "US", "Campaign name": "META_PROS_AdvPlus_US_202612", "Campaign type": "Advantage+ sales", "Objective": "Sales", "Bid strategy": "Highest volume", "Target CPA ($)": "", "Monthly budget ($)": 40000, "Daily budget ($)": 1290, "Budget level": "Campaign", "Conversion event": "StartTrial", "Start date": "2026-12-01", "End date": "2026-12-31", "Locations": "United States", "Languages": "", "Status": "Paused", "Notes": "Geo assumed US — confirm. No cost cap until tracking is validated.", "Existing campaign name (edit in place)": ""}, {"Platform": "Meta", "Funnel": "TEST", "Key": "CreativeTest", "Geo": "US", "Campaign name": "META_TEST_CreativeTest_US_202612", "Campaign type": "Manual sales", "Objective": "Sales", "Bid strategy": "Highest volume", "Target CPA ($)": "", "Monthly budget ($)": 10000, "Daily budget ($)": 323, "Budget level": "Ad set", "Conversion event": "StartTrial", "Start date": "2026-12-01", "End date": "2026-12-31", "Locations": "United States", "Languages": "", "Status": "Paused", "Notes": "Equal budget per concept so each gets a fair read (~$2.5K each).", "Existing campaign name (edit in place)": ""}, {"Platform": "Meta", "Funnel": "RET", "Key": "RT14d", "Geo": "US", "Campaign name": "META_RET_RT14d_US_202612", "Campaign type": "Manual sales", "Objective": "Sales", "Bid strategy": "Highest volume", "Target CPA ($)": "", "Monthly budget ($)": 4000, "Daily budget ($)": 129, "Budget level": "Campaign", "Conversion event": "StartTrial", "Start date": "2026-12-01", "End date": "2026-12-31", "Locations": "United States", "Languages": "", "Status": "Paused", "Notes": "Small cap until incrementality is shown. 14d window is a test.", "Existing campaign name (edit in place)": ""}, {"Platform": "Google", "Funnel": "PMAX", "Key": "PMax", "Geo": "US", "Campaign name": "{{EXISTING_PMAX_NAME}}", "Campaign type": "Performance Max", "Objective": "Leads", "Bid strategy": "Maximize conversions", "Target CPA ($)": "", "Monthly budget ($)": 12000, "Daily budget ($)": 395, "Budget level": "Campaign", "Conversion event": "Trial signup", "Start date": "2026-12-01", "End date": "2026-12-31", "Locations": "United States", "Languages": "English", "Status": "Paused", "Notes": "Rebuilt IN PLACE: keeps campaign history. New asset groups import Paused; switch them on and pause the old ones together. Brand exclusion is set manually.", "Existing campaign name (edit in place)": "{{EXISTING_PMAX_NAME}}"}], "Concepts": [{"Concept ID": "FOUNDER_STORY", "Concept name": "Founder story (UGC)", "Audience / ICP": "Agency owners", "Problem or intent": "Team drowning in repetitive SEO work", "Core message": "Founder built AgentStack to get his agency's time back", "Landing path": "/trial/agencies", "Primary CTA": "SIGN_UP", "Platforms": "Both", "Formats": "Video; Image (stills)", "Status": "Validated", "Evidence so far": "Best ad pre-break: $200 CPA (UGC_Founder_v2)", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "AGENCY_OWNER", "Concept name": "Agency owner testimonial (UGC)", "Audience / ICP": "Agency owners / ops leads", "Problem or intent": "Scaling output without hiring", "Core message": "Grow output without growing headcount", "Landing path": "/trial/agencies", "Primary CTA": "SIGN_UP", "Platforms": "Both", "Formats": "Video", "Status": "Validated", "Evidence so far": "$218 CPA pre-break", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "BENEFITS_STATIC", "Concept name": "Benefits static", "Audience / ICP": "Marketing & SEO leads", "Problem or intent": "Too much manual work across tools", "Core message": "Audits, briefs and reports handled by AI agents", "Landing path": "/trial", "Primary CTA": "SIGN_UP", "Platforms": "Both", "Formats": "Image", "Status": "Validated", "Evidence so far": "$243 CPA pre-break", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "DEMO_WALKTHROUGH", "Concept name": "Product demo walkthrough", "Audience / ICP": "SEO practitioners", "Problem or intent": "Want to see it working before trying", "Core message": "Watch an agent build a full SEO audit", "Landing path": "/trial/seo", "Primary CTA": "SIGN_UP", "Platforms": "Both", "Formats": "Video; Image", "Status": "Validated", "Evidence so far": "$247 CPA pre-break", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "CASE_STUDY", "Concept name": "Agency case study", "Audience / ICP": "Agency owners", "Problem or intent": "Need proof it works for agencies", "Core message": "One agency cut reporting time with AI agents", "Landing path": "/customers", "Primary CTA": "LEARN_MORE", "Platforms": "Both", "Formats": "Image", "Status": "Ready for testing", "Evidence so far": "Only 1 clean week so far ($380). Re-test", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "PROBLEM_SOLUTION", "Concept name": "Problem → solution video", "Audience / ICP": "Agency owners", "Problem or intent": "Too many clients, not enough hours", "Core message": "AI agents take the repetitive work off your plate", "Landing path": "/trial", "Primary CTA": "SIGN_UP", "Platforms": "Meta", "Formats": "Video", "Status": "Ready for testing", "Evidence so far": "New concept", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "AGENCY_RESULTS", "Concept name": "Agency results static", "Audience / ICP": "Agency owners", "Problem or intent": "Need numbers before committing", "Core message": "Real, approved customer result (see Claims)", "Landing path": "/trial/agencies", "Primary CTA": "SIGN_UP", "Platforms": "Both", "Formats": "Image", "Status": "In production", "Evidence so far": "Planned. Blocked until claim CL01 is approved; then it can take a test slot", "Claim required": "Y", "Claim ID": "CL01", "PLACEHOLDER": "Y"}, {"Concept ID": "BEFORE_AFTER_WORKFLOW", "Concept name": "Before / after workflow (fallback)", "Audience / ICP": "Agency owners", "Problem or intent": "Manual workflows eat the week", "Core message": "The same audit: manual vs. run by an AI agent", "Landing path": "/trial/agencies", "Primary CTA": "SIGN_UP", "Platforms": "Meta", "Formats": "Image", "Status": "Ready for testing", "Evidence so far": "In the 3rd test slot (AGENCY_RESULTS blocked until CL01 approved). Shows the workflow; no quantified claims", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "TESTIMONIAL", "Concept name": "Retargeting testimonial", "Audience / ICP": "Site visitors who didn't sign up", "Problem or intent": "Still deciding", "Core message": "Hear why agencies switched", "Landing path": "/trial", "Primary CTA": "SIGN_UP", "Platforms": "Meta", "Formats": "Video", "Status": "Testing", "Evidence so far": "$342 CPA pre-break; incrementality unproven", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}, {"Concept ID": "BRAND_LOGO", "Concept name": "Brand logos", "Audience / ICP": "—", "Problem or intent": "—", "Core message": "—", "Landing path": "/", "Primary CTA": "", "Platforms": "PMax", "Formats": "Logo", "Status": "Validated", "Evidence so far": "Required by PMax: square logo (1:1), optional 4:1", "Claim required": "N", "Claim ID": "", "PLACEHOLDER": "Y"}], "Claims": [{"Claim ID": "CL01", "Concept ID": "AGENCY_RESULTS", "Claim type": "Customer result", "Claim text": "{{REAL CUSTOMER RESULT}}", "Evidence / source": "{{SOURCE: case study / customer sign-off}}", "Approval status": "Pending", "Approved by": "", "Date approved": "", "PLACEHOLDER": "Y"}], "Creative_Library": [{"File name": "FOUNDER_STORY_v3_4x5_TEST.mp4", "Concept ID": "FOUNDER_STORY", "Version": "v3", "Ratio": "4x5", "Asset type": "Video", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "FOUNDER_STORY_v3_9x16_TEST.mp4", "Concept ID": "FOUNDER_STORY", "Version": "v3", "Ratio": "9x16", "Asset type": "Video", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "FOUNDER_STORY_v3_16x9_TEST.mp4", "Concept ID": "FOUNDER_STORY", "Version": "v3", "Ratio": "16x9", "Asset type": "Video", "Used for": "PMax video (landscape)", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "FOUNDER_STORY_v3_191x1_TEST.png", "Concept ID": "FOUNDER_STORY", "Version": "v3", "Ratio": "191x1", "Asset type": "Image", "Used for": "PMax landscape", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "FOUNDER_STORY_v3_1x1_TEST.png", "Concept ID": "FOUNDER_STORY", "Version": "v3", "Ratio": "1x1", "Asset type": "Image", "Used for": "Meta feed; PMax square", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "AGENCY_OWNER_v1_4x5_TEST.mp4", "Concept ID": "AGENCY_OWNER", "Version": "v1", "Ratio": "4x5", "Asset type": "Video", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "AGENCY_OWNER_v1_9x16_TEST.mp4", "Concept ID": "AGENCY_OWNER", "Version": "v1", "Ratio": "9x16", "Asset type": "Video", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "AGENCY_OWNER_v1_16x9_TEST.mp4", "Concept ID": "AGENCY_OWNER", "Version": "v1", "Ratio": "16x9", "Asset type": "Video", "Used for": "PMax video (landscape)", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "BENEFITS_STATIC_v1_1x1_TEST.png", "Concept ID": "BENEFITS_STATIC", "Version": "v1", "Ratio": "1x1", "Asset type": "Image", "Used for": "Meta feed; PMax square", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "BENEFITS_STATIC_v1_4x5_TEST.png", "Concept ID": "BENEFITS_STATIC", "Version": "v1", "Ratio": "4x5", "Asset type": "Image", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "BENEFITS_STATIC_v1_9x16_TEST.png", "Concept ID": "BENEFITS_STATIC", "Version": "v1", "Ratio": "9x16", "Asset type": "Image", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "BENEFITS_STATIC_v1_191x1_TEST.png", "Concept ID": "BENEFITS_STATIC", "Version": "v1", "Ratio": "191x1", "Asset type": "Image", "Used for": "PMax landscape", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "DEMO_WALKTHROUGH_v1_4x5_TEST.mp4", "Concept ID": "DEMO_WALKTHROUGH", "Version": "v1", "Ratio": "4x5", "Asset type": "Video", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "DEMO_WALKTHROUGH_v1_9x16_TEST.mp4", "Concept ID": "DEMO_WALKTHROUGH", "Version": "v1", "Ratio": "9x16", "Asset type": "Video", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "DEMO_WALKTHROUGH_v1_16x9_TEST.mp4", "Concept ID": "DEMO_WALKTHROUGH", "Version": "v1", "Ratio": "16x9", "Asset type": "Video", "Used for": "PMax video (landscape)", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "DEMO_WALKTHROUGH_v1_191x1_TEST.png", "Concept ID": "DEMO_WALKTHROUGH", "Version": "v1", "Ratio": "191x1", "Asset type": "Image", "Used for": "PMax landscape", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "DEMO_WALKTHROUGH_v1_1x1_TEST.png", "Concept ID": "DEMO_WALKTHROUGH", "Version": "v1", "Ratio": "1x1", "Asset type": "Image", "Used for": "Meta feed; PMax square", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "CASE_STUDY_v2_4x5_TEST.png", "Concept ID": "CASE_STUDY", "Version": "v2", "Ratio": "4x5", "Asset type": "Image", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "CASE_STUDY_v2_9x16_TEST.png", "Concept ID": "CASE_STUDY", "Version": "v2", "Ratio": "9x16", "Asset type": "Image", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "CASE_STUDY_v2_191x1_TEST.png", "Concept ID": "CASE_STUDY", "Version": "v2", "Ratio": "191x1", "Asset type": "Image", "Used for": "PMax landscape", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "CASE_STUDY_v2_1x1_TEST.png", "Concept ID": "CASE_STUDY", "Version": "v2", "Ratio": "1x1", "Asset type": "Image", "Used for": "Meta feed; PMax square", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "PROBLEM_SOLUTION_v1_4x5_TEST.mp4", "Concept ID": "PROBLEM_SOLUTION", "Version": "v1", "Ratio": "4x5", "Asset type": "Video", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "PROBLEM_SOLUTION_v1_9x16_TEST.mp4", "Concept ID": "PROBLEM_SOLUTION", "Version": "v1", "Ratio": "9x16", "Asset type": "Video", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "AGENCY_RESULTS_v1_4x5_TEST.png", "Concept ID": "AGENCY_RESULTS", "Version": "v1", "Ratio": "4x5", "Asset type": "Image", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "AGENCY_RESULTS_v1_9x16_TEST.png", "Concept ID": "AGENCY_RESULTS", "Version": "v1", "Ratio": "9x16", "Asset type": "Image", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "AGENCY_RESULTS_v1_191x1_TEST.png", "Concept ID": "AGENCY_RESULTS", "Version": "v1", "Ratio": "191x1", "Asset type": "Image", "Used for": "PMax landscape", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "AGENCY_RESULTS_v1_1x1_TEST.png", "Concept ID": "AGENCY_RESULTS", "Version": "v1", "Ratio": "1x1", "Asset type": "Image", "Used for": "Meta feed; PMax square", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "TESTIMONIAL_v1_4x5_TEST.mp4", "Concept ID": "TESTIMONIAL", "Version": "v1", "Ratio": "4x5", "Asset type": "Video", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "TESTIMONIAL_v1_9x16_TEST.mp4", "Concept ID": "TESTIMONIAL", "Version": "v1", "Ratio": "9x16", "Asset type": "Video", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": 12, "PLACEHOLDER": "Y"}, {"File name": "BEFORE_AFTER_WORKFLOW_v1_4x5_TEST.png", "Concept ID": "BEFORE_AFTER_WORKFLOW", "Version": "v1", "Ratio": "4x5", "Asset type": "Image", "Used for": "Meta feed; PMax portrait", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "BEFORE_AFTER_WORKFLOW_v1_9x16_TEST.png", "Concept ID": "BEFORE_AFTER_WORKFLOW", "Version": "v1", "Ratio": "9x16", "Asset type": "Image", "Used for": "Meta Stories/Reels", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "BRAND_LOGO_v1_1x1_TEST.png", "Concept ID": "BRAND_LOGO", "Version": "v1", "Ratio": "1x1", "Asset type": "Logo", "Used for": "PMax square logo", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}, {"File name": "BRAND_LOGO_v1_4x1_TEST.png", "Concept ID": "BRAND_LOGO", "Version": "v1", "Ratio": "4x1", "Asset type": "Logo", "Used for": "PMax landscape logo", "Approval status": "TEST", "Video length (s)": "", "PLACEHOLDER": "Y"}], "Google_Keywords": [{"Campaign key": "Brand", "Ad group": "Brand_Core", "Keyword": "agentstack", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Ad group": "Brand_Core", "Keyword": "agentstack ai", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Ad group": "Brand_Core", "Keyword": "agentstack pricing", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Ad group": "Brand_Core", "Keyword": "agentstack free trial", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Ad group": "Brand_Core", "Keyword": "agentstack reviews", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Ad group": "Brand_Core", "Keyword": "agentstack", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Agents_Agencies", "Keyword": "ai agents for agencies", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Agents_Agencies", "Keyword": "ai agent platform for agencies", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Agents_Agencies", "Keyword": "ai automation for marketing agencies", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Agents_Agencies", "Keyword": "ai agents for marketing agencies", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Agents_Agencies", "Keyword": "agency ai automation software", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "Agentic_SEO", "Keyword": "agentic seo", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "Agentic_SEO", "Keyword": "ai seo agent", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "Agentic_SEO", "Keyword": "ai seo automation", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "Agentic_SEO", "Keyword": "ai seo automation tool", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "Agentic_SEO", "Keyword": "seo ai agent software", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Marketing_Automation", "Keyword": "ai marketing agent", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Marketing_Automation", "Keyword": "ai marketing automation software", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Marketing_Automation", "Keyword": "ai workflow automation for marketing", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Marketing_Automation", "Keyword": "ai agent platform", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Competitor_Alternatives", "Keyword": "{{COMPETITOR_1}} alternative", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Competitor_Alternatives", "Keyword": "{{COMPETITOR_2}} alternative", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Competitor_Alternatives", "Keyword": "{{COMPETITOR_1}} vs", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Best_Platform", "Keyword": "best ai agent platform", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Best_Platform", "Keyword": "best ai seo tools for agencies", "Match type": "Phrase", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Best_Platform", "Keyword": "ai agent software comparison", "Match type": "Exact", "Max CPC ($, optional)": "", "PLACEHOLDER": "Y"}], "Google_Negatives": [{"Campaign key": "Brand", "Negative keyword": "login", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Negative keyword": "sign in", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Negative keyword": "support", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Negative keyword": "careers", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "Brand", "Negative keyword": "jobs", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "jobs", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "careers", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "salary", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "course", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "certification", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "tutorial", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "github", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "open source", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "what is", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "agentstack", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Negative keyword": "jobs", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Negative keyword": "careers", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Negative keyword": "course", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Negative keyword": "free download", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Negative keyword": "agentstack", "Match type": "Phrase", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Negative keyword": "{{IMPORT the 40 negatives added Oct 6 from the live account}}", "Match type": "Phrase", "PLACEHOLDER": "Y"}], "Google_RSAs": [{"Campaign key": "Brand", "Ad group": "Brand_Core", "Landing path": "/", "Path 1": "Official", "Path 2": "Free-Trial", "Headline 1": "AgentStack Official Site", "Headline 2": "Start Your Free Trial", "Headline 3": "AI Agents for Agencies", "Headline 4": "Automate Client SEO Work", "Headline 5": "Launch Agents in Minutes", "Headline 6": "Built for Marketing Teams", "Headline 7": "Try AgentStack Free", "Headline 8": "See AgentStack Pricing", "Headline 9": "", "Headline 10": "", "Headline 11": "", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Description 1": "Build and run AI agents for SEO, content and reporting. Start your free trial today.", "Description 2": "Agencies use AgentStack to automate repetitive client work. See how it works.", "Description 3": "Set up your first agent in minutes and scale across every client account.", "Description 4": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Agents_Agencies", "Landing path": "/trial/agencies", "Path 1": "Agencies", "Path 2": "AI-Agents", "Headline 1": "AI Agents for Agencies", "Headline 2": "Automate Client Deliverables", "Headline 3": "Scale Without New Hires", "Headline 4": "Start Your Free Trial", "Headline 5": "Built for Agency Teams", "Headline 6": "Agents for SEO and Content", "Headline 7": "Free Up Billable Hours", "Headline 8": "Try AgentStack Free", "Headline 9": "", "Headline 10": "", "Headline 11": "", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Description 1": "Hand repetitive client work to AI agents and give your team time back for strategy.", "Description 2": "Audits, briefs and reports run on autopilot across every client. Start a free trial.", "Description 3": "Built for agencies that want to grow output without growing headcount.", "Description 4": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "Agentic_SEO", "Landing path": "/trial/seo", "Path 1": "Agentic-SEO", "Path 2": "Free-Trial", "Headline 1": "AI Agents That Do SEO Work", "Headline 2": "Automate SEO Audits", "Headline 3": "Content Briefs in Minutes", "Headline 4": "Agentic SEO for Agencies", "Headline 5": "Rank Tracking on Autopilot", "Headline 6": "Start Your Free Trial", "Headline 7": "Try AgentStack Free", "Headline 8": "Built for SEO Teams", "Headline 9": "", "Headline 10": "", "Headline 11": "", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Description 1": "Let AI agents run technical audits, keyword research and content briefs for you.", "Description 2": "Agentic SEO that works across every client site. Start your free trial today.", "Description 3": "Spend less time on SEO busywork and more time on strategy that moves rankings.", "Description 4": "", "PLACEHOLDER": "Y"}, {"Campaign key": "NonBrand", "Ad group": "AI_Marketing_Automation", "Landing path": "/trial", "Path 1": "AI-Marketing", "Path 2": "Agents", "Headline 1": "AI Marketing Agents", "Headline 2": "Automate Marketing Workflows", "Headline 3": "Build Agents Without Code", "Headline 4": "Start Your Free Trial", "Headline 5": "From Brief to Report Faster", "Headline 6": "Try AgentStack Free", "Headline 7": "Connect Your Marketing Stack", "Headline 8": "Launch Agents in Minutes", "Headline 9": "", "Headline 10": "", "Headline 11": "", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Description 1": "Create AI agents that handle research, content and reporting across your stack.", "Description 2": "Automate the repetitive parts of marketing and keep your team on high-value work.", "Description 3": "Start a free trial and launch your first marketing agent today.", "Description 4": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Competitor_Alternatives", "Landing path": "/compare", "Path 1": "Compare", "Path 2": "Alternatives", "Headline 1": "A Smarter Alternative", "Headline 2": "Compare AgentStack", "Headline 3": "See How We Compare", "Headline 4": "Built for Agency Workflows", "Headline 5": "Start Your Free Trial", "Headline 6": "Try AgentStack Free", "Headline 7": "AI Agents for Agencies", "Headline 8": "Switching Made Simple", "Headline 9": "", "Headline 10": "", "Headline 11": "", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Description 1": "Looking for an alternative? See why agencies choose AgentStack for AI automation.", "Description 2": "Compare features side by side, then start a free trial and see the difference.", "Description 3": "Purpose-built AI agents for SEO, content and client reporting.", "Description 4": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CompTest", "Ad group": "Best_Platform", "Landing path": "/compare", "Path 1": "AI-Agents", "Path 2": "Compare", "Headline 1": "Compare AI Agent Platforms", "Headline 2": "Built for Agency Workflows", "Headline 3": "AI Agents for SEO & Content", "Headline 4": "Start Your Free Trial", "Headline 5": "Try AgentStack Free", "Headline 6": "See How We Compare", "Headline 7": "Launch Agents in Minutes", "Headline 8": "AI Agents for Agencies", "Headline 9": "", "Headline 10": "", "Headline 11": "", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Description 1": "Choosing an AI agent platform? Compare features built for agencies and SEO teams.", "Description 2": "See how AgentStack handles audits, briefs and reports, then start a free trial.", "Description 3": "Purpose-built AI agents for SEO, content and client reporting.", "Description 4": "", "PLACEHOLDER": "Y"}], "PMax_AssetGroups": [{"Campaign key": "PMax", "Asset group": "AG_Agencies", "Action": "New (import Paused)", "Concept IDs (; separated)": "FOUNDER_STORY; AGENCY_OWNER", "Final URL path": "/trial/agencies", "Path 1": "Agencies", "Path 2": "AI-Agents", "Business name (blank = Settings)": "", "Call to action": "Automated", "Headline 1": "AI Agents for Agencies", "Headline 2": "Scale Without New Hires", "Headline 3": "Automate Client Reporting", "Headline 4": "Free Up Billable Hours", "Headline 5": "Built for Agency Teams", "Headline 6": "Audits on Autopilot", "Headline 7": "Start Your Free Trial", "Headline 8": "Try AgentStack Free", "Headline 9": "More Clients, Same Team", "Headline 10": "Agency Work, Automated", "Headline 11": "AgentStack", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Long headline 1": "AI agents that handle audits, briefs and reports for every client account", "Long headline 2": "Grow your agency's output without growing headcount. Start a free trial.", "Long headline 3": "", "Long headline 4": "", "Long headline 5": "", "Description 1": "Free trial for agencies.", "Description 2": "Hand repetitive client work to AI agents and give your team time back for strategy.", "Description 3": "Audits, briefs and reports run on autopilot across every client account.", "Description 4": "Built for agencies that want to grow output without growing headcount.", "Description 5": "", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Action": "New (import Paused)", "Concept IDs (; separated)": "DEMO_WALKTHROUGH; BENEFITS_STATIC", "Final URL path": "/trial/seo", "Path 1": "Agentic-SEO", "Path 2": "Free-Trial", "Business name (blank = Settings)": "", "Call to action": "Automated", "Headline 1": "Agentic SEO", "Headline 2": "AI Agents That Do SEO Work", "Headline 3": "Automate SEO Audits", "Headline 4": "Content Briefs in Minutes", "Headline 5": "Rank Tracking on Autopilot", "Headline 6": "Built for SEO Teams", "Headline 7": "Start Your Free Trial", "Headline 8": "Try AgentStack Free", "Headline 9": "AI SEO Agents", "Headline 10": "Technical SEO, Automated", "Headline 11": "Keyword Research in Minutes", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Long headline 1": "Let AI agents run technical audits, keyword research and content briefs for you", "Long headline 2": "Agentic SEO that works across every site you manage. Start your free trial today.", "Long headline 3": "", "Long headline 4": "", "Long headline 5": "", "Description 1": "Try agentic SEO free.", "Description 2": "AI agents run audits, keyword research and briefs so your team can focus on strategy.", "Description 3": "Spend less time on SEO busywork and more time on work that moves rankings.", "Description 4": "Works across every client site you manage. Start your free trial today.", "Description 5": "", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Action": "New (import Paused)", "Concept IDs (; separated)": "BENEFITS_STATIC; CASE_STUDY", "Final URL path": "/trial", "Path 1": "AI-Marketing", "Path 2": "Agents", "Business name (blank = Settings)": "", "Call to action": "Automated", "Headline 1": "AI Marketing Agents", "Headline 2": "Automate Marketing Workflows", "Headline 3": "From Brief to Report Faster", "Headline 4": "Connect Your Marketing Stack", "Headline 5": "Launch Agents in Minutes", "Headline 6": "Start Your Free Trial", "Headline 7": "Try AgentStack Free", "Headline 8": "Marketing Work, Automated", "Headline 9": "Less Busywork, More Strategy", "Headline 10": "AI Agents for Marketers", "Headline 11": "Try It Free", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Long headline 1": "Create AI agents that handle research, content and reporting across your stack", "Long headline 2": "Automate the repetitive parts of marketing and keep your team on high-value work", "Long headline 3": "", "Long headline 4": "", "Long headline 5": "", "Description 1": "Launch your first agent today.", "Description 2": "AI agents handle research, content and reporting across your marketing stack.", "Description 3": "Automate the busywork and keep your team focused on strategy.", "Description 4": "See how agencies use AI agents to deliver more without hiring.", "Description 5": "", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "{{EXISTING_ASSET_GROUP_1}}", "Action": "Pause existing", "Concept IDs (; separated)": "", "Final URL path": "", "Path 1": "", "Path 2": "", "Business name (blank = Settings)": "", "Call to action": "", "Headline 1": "", "Headline 2": "", "Headline 3": "", "Headline 4": "", "Headline 5": "", "Headline 6": "", "Headline 7": "", "Headline 8": "", "Headline 9": "", "Headline 10": "", "Headline 11": "", "Headline 12": "", "Headline 13": "", "Headline 14": "", "Headline 15": "", "Long headline 1": "", "Long headline 2": "", "Long headline 3": "", "Long headline 4": "", "Long headline 5": "", "Description 1": "", "Description 2": "", "Description 3": "", "Description 4": "", "Description 5": "", "PLACEHOLDER": "Y"}], "PMax_Signals": [{"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Search theme", "Value": "ai agents for agencies", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Search theme", "Value": "agency automation software", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Search theme", "Value": "client reporting automation", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Search theme", "Value": "ai tools for marketing agencies", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Search theme", "Value": "white label seo automation", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Audience signal", "Value": "Customer list: trial users", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Audience signal", "Value": "Website visitors – 30d", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agencies", "Signal type": "Audience signal", "Value": "Custom segment: people searching competitor terms", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Search theme", "Value": "ai seo agent", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Search theme", "Value": "agentic seo", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Search theme", "Value": "seo audit automation", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Search theme", "Value": "content brief generator", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Search theme", "Value": "keyword research automation", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Audience signal", "Value": "Customer list: trial users", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Audience signal", "Value": "Website visitors – 30d", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Agentic_SEO", "Signal type": "Audience signal", "Value": "Custom segment: people searching competitor terms", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Search theme", "Value": "ai marketing automation", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Search theme", "Value": "marketing workflow automation", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Search theme", "Value": "ai marketing agent", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Search theme", "Value": "automated marketing reports", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Search theme", "Value": "ai content operations", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Audience signal", "Value": "Customer list: trial users", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Audience signal", "Value": "Website visitors – 30d", "PLACEHOLDER": "Y"}, {"Campaign key": "PMax", "Asset group": "AG_Marketing_Automation", "Signal type": "Audience signal", "Value": "Custom segment: people searching competitor terms", "PLACEHOLDER": "Y"}], "Meta_AdSets": [{"Campaign key": "AdvPlus", "Ad set name": "ASC_Broad_US", "Ad set daily budget ($)": "Campaign budget", "Countries": "United States", "Age min": 25, "Age max": 65, "Gender": "All", "Include audiences": "Advantage+ audience", "Exclude audiences": "Trial signups – 180d; Customers", "Placements": "Advantage+ placements", "Conversion event": "StartTrial", "Test concept ID": "", "PLACEHOLDER": "Y"}, {"Campaign key": "CreativeTest", "Ad set name": "TEST_CASE_STUDY", "Ad set daily budget ($)": 108, "Countries": "United States", "Age min": 25, "Age max": 65, "Gender": "All", "Include audiences": "Broad", "Exclude audiences": "Trial signups – 180d; Customers", "Placements": "Advantage+ placements", "Conversion event": "StartTrial", "Test concept ID": "CASE_STUDY", "PLACEHOLDER": "Y"}, {"Campaign key": "CreativeTest", "Ad set name": "TEST_PROBLEM_SOLUTION", "Ad set daily budget ($)": 108, "Countries": "United States", "Age min": 25, "Age max": 65, "Gender": "All", "Include audiences": "Broad", "Exclude audiences": "Trial signups – 180d; Customers", "Placements": "Advantage+ placements", "Conversion event": "StartTrial", "Test concept ID": "PROBLEM_SOLUTION", "PLACEHOLDER": "Y"}, {"Campaign key": "CreativeTest", "Ad set name": "TEST_BEFORE_AFTER_WORKFLOW", "Ad set daily budget ($)": 108, "Countries": "United States", "Age min": 25, "Age max": 65, "Gender": "All", "Include audiences": "Broad", "Exclude audiences": "Trial signups – 180d; Customers", "Placements": "Advantage+ placements", "Conversion event": "StartTrial", "Test concept ID": "BEFORE_AFTER_WORKFLOW", "PLACEHOLDER": "Y"}, {"Campaign key": "RT14d", "Ad set name": "RT_Web14d_ExclTrials", "Ad set daily budget ($)": "Campaign budget", "Countries": "United States", "Age min": 25, "Age max": 65, "Gender": "All", "Include audiences": "Website visitors – 14d", "Exclude audiences": "Trial signups – 180d; Customers", "Placements": "Advantage+ placements", "Conversion event": "StartTrial", "Test concept ID": "", "PLACEHOLDER": "Y"}], "Meta_Ads": [{"Campaign key": "AdvPlus", "Ad set name": "ASC_Broad_US", "Ad name": "FOUNDER_STORY_v3_HookA", "Concept ID": "FOUNDER_STORY", "Execution": "v3", "Hook code": "HA", "Format": "Video", "Creative override (optional)": "", "Primary text": "I built AgentStack because my agency was drowning in repetitive SEO work. Now AI agents handle audits, briefs and reports.", "Headline": "Start your free trial", "Description": "AI agents for agencies", "Call to action (blank = concept's)": "", "Landing path override (optional)": "", "Previous ad name": "UGC_Founder_v2", "Previous ad ID": "{{OLD_AD_ID}}", "PLACEHOLDER": "Y", "Notes": "Was UGC_Founder_v2 (best ad). Refreshed edit."}, {"Campaign key": "AdvPlus", "Ad set name": "ASC_Broad_US", "Ad name": "FOUNDER_STORY_v3_HookB", "Concept ID": "FOUNDER_STORY", "Execution": "v3", "Hook code": "HB", "Format": "Video", "Creative override (optional)": "", "Primary text": "Your team didn't get into marketing to copy-paste reports. Let AI agents do it.", "Headline": "Start your free trial", "Description": "AI agents for agencies", "Call to action (blank = concept's)": "", "Landing path override (optional)": "", "Previous ad name": "", "Previous ad ID": "", "PLACEHOLDER": "Y", "Notes": "New hook on the winning concept. Judged pooled with HookA."}, {"Campaign key": "AdvPlus", "Ad set name": "ASC_Broad_US", "Ad name": "AGENCY_OWNER_v1", "Concept ID": "AGENCY_OWNER", "Execution": "v1", "Hook code": "HA", "Format": "Video", "Creative override (optional)": "", "Primary text": "We stopped hiring for busywork. Our AI agents now run SEO audits and client reports every week.", "Headline": "Scale without new hires", "Description": "Try AgentStack free", "Call to action (blank = concept's)": "", "Landing path override (optional)": "", "Previous ad name": "UGC_Agency_Owner", "Previous ad ID": "{{OLD_AD_ID}}", "PLACEHOLDER": "Y", "Notes": "Was UGC_Agency_Owner."}, {"Campaign key": "AdvPlus", "Ad set name": "ASC_Broad_US", "Ad name": "BENEFITS_STATIC_v1", "Concept ID": "BENEFITS_STATIC", "Execution": "v1", "Hook code": "HA", "Format": "Image", "Creative override (optional)": "", "Primary text": "Audits, content briefs and reporting — handled by AI agents built for agencies.", "Headline": "AI agents for agencies", "Description": "Start free trial", "Call to action (blank = concept's)": "", "Landing path override (optional)": "", "Previous ad name": "Static_AgentStack_Benefits", "Previous ad ID": "{{OLD_AD_ID}}", "PLACEHOLDER": "Y", "Notes": "Was Static_AgentStack_Benefits."}, {"Campaign key": "AdvPlus", "Ad set name": "ASC_Broad_US", "Ad name": "DEMO_WALKTHROUGH_v1", "Concept ID": "DEMO_WALKTHROUGH", "Execution": "v1", "Hook code": "HA", "Format": "Video", "Creative override (optional)": "", "Primary text": "See how an AI agent builds a full SEO audit in minutes. No setup headaches.", "Headline": "Watch it work, then try it", "Description": "Free trial", "Call to action (blank = concept's)": "", "Landing path override (optional)": "", "Previous ad name": "Demo_Screen_Walkthrough", "Previous ad ID": "{{OLD_AD_ID}}", "PLACEHOLDER": "Y", "Notes": "Was Demo_Screen_Walkthrough."}, {"Campaign key": "RT14d", "Ad set name": "RT_Web14d_ExclTrials", "Ad name": "TESTIMONIAL_v1", "Concept ID": "TESTIMONIAL", "Execution": "v1", "Hook code": "HA", "Format": "Video", "Creative override (optional)": "", "Primary text": "Still thinking it over? Hear why agencies switched to AgentStack.", "Headline": "Start your free trial", "Description": "Set up in minutes", "Call to action (blank = concept's)": "", "Landing path override (optional)": "", "Previous ad name": "Retargeting_Testimonial", "Previous ad ID": "{{OLD_AD_ID}}", "PLACEHOLDER": "Y", "Notes": "Was Retargeting_Testimonial."}, {"Campaign key": "RT14d", "Ad set name": "RT_Web14d_ExclTrials", "Ad name": "DEMO_WALKTHROUGH_v1_RT", "Concept ID": "DEMO_WALKTHROUGH", "Execution": "v1", "Hook code": "HA", "Format": "Video", "Creative override (optional)": "", "Primary text": "You've seen the site — now see an AI agent build a full SEO audit in minutes.", "Headline": "See it in action", "Description": "Free trial", "Call to action (blank = concept's)": "", "Landing path override (optional)": "", "Previous ad name": "", "Previous ad ID": "", "PLACEHOLDER": "Y", "Notes": "Reuses the demo concept for retargeting."}], "Variants": [{"Concept ID": "CASE_STUDY", "Element": "Hook", "Code": "HA", "Text": "How one agency cut client reporting time with AI agents. See the numbers.", "PLACEHOLDER": "Y"}, {"Concept ID": "CASE_STUDY", "Element": "Hook", "Code": "HB", "Text": "Reporting used to eat Fridays. Here's what changed when this agency handed it to AI agents.", "PLACEHOLDER": "Y"}, {"Concept ID": "CASE_STUDY", "Element": "Headline", "Code": "T1", "Text": "See the case study", "PLACEHOLDER": "Y"}, {"Concept ID": "CASE_STUDY", "Element": "Headline", "Code": "T2", "Text": "Real agency, real results", "PLACEHOLDER": "Y"}, {"Concept ID": "CASE_STUDY", "Element": "Description", "Code": "D1", "Text": "Start free trial", "PLACEHOLDER": "Y"}, {"Concept ID": "PROBLEM_SOLUTION", "Element": "Hook", "Code": "HA", "Text": "Too many clients, not enough hours? AI agents take the repetitive SEO work off your plate.", "PLACEHOLDER": "Y"}, {"Concept ID": "PROBLEM_SOLUTION", "Element": "Hook", "Code": "HB", "Text": "Your agency runs on busywork. AI agents can run it instead, so your team can do strategy.", "PLACEHOLDER": "Y"}, {"Concept ID": "PROBLEM_SOLUTION", "Element": "Headline", "Code": "T1", "Text": "Get hours back every week", "PLACEHOLDER": "Y"}, {"Concept ID": "PROBLEM_SOLUTION", "Element": "Headline", "Code": "T2", "Text": "Start your free trial", "PLACEHOLDER": "Y"}, {"Concept ID": "PROBLEM_SOLUTION", "Element": "Description", "Code": "D1", "Text": "Start free trial", "PLACEHOLDER": "Y"}, {"Concept ID": "AGENCY_RESULTS", "Element": "Hook", "Code": "HA", "Text": "{{REAL CUSTOMER RESULT}}: what agencies get back when AI agents handle the busywork.", "PLACEHOLDER": "Y"}, {"Concept ID": "AGENCY_RESULTS", "Element": "Hook", "Code": "HB", "Text": "Agencies on AgentStack spend {{REAL STAT}} less time on audits. Try it free.", "PLACEHOLDER": "Y"}, {"Concept ID": "AGENCY_RESULTS", "Element": "Headline", "Code": "T1", "Text": "Built for agencies", "PLACEHOLDER": "Y"}, {"Concept ID": "AGENCY_RESULTS", "Element": "Headline", "Code": "T2", "Text": "Proof from real agencies", "PLACEHOLDER": "Y"}, {"Concept ID": "AGENCY_RESULTS", "Element": "Description", "Code": "D1", "Text": "Start free trial", "PLACEHOLDER": "Y"}, {"Concept ID": "BEFORE_AFTER_WORKFLOW", "Element": "Hook", "Code": "HA", "Text": "Left: an SEO audit done step by step by hand. Right: the same audit, with an AI agent running the steps.", "PLACEHOLDER": "Y"}, {"Concept ID": "BEFORE_AFTER_WORKFLOW", "Element": "Hook", "Code": "HB", "Text": "Same client audit, two workflows: your team doing every step, or an AI agent doing them while your team reviews.", "PLACEHOLDER": "Y"}, {"Concept ID": "BEFORE_AFTER_WORKFLOW", "Element": "Headline", "Code": "T1", "Text": "See the difference", "PLACEHOLDER": "Y"}, {"Concept ID": "BEFORE_AFTER_WORKFLOW", "Element": "Headline", "Code": "T2", "Text": "Let agents do the audit", "PLACEHOLDER": "Y"}, {"Concept ID": "BEFORE_AFTER_WORKFLOW", "Element": "Description", "Code": "D1", "Text": "Start free trial", "PLACEHOLDER": "Y"}]};
+const TABS = ["Settings","Campaigns","Concepts","Claims","Creative_Library","Google_Keywords","Google_Negatives","Google_RSAs","PMax_AssetGroups","PMax_Signals","Meta_AdSets","Meta_Ads","Variants"];
+const s = v => (v === null || v === undefined) ? "" : String(v).trim();
+const num = v => { const n = parseFloat(String(v).replace(/[$,]/g,"")); return isFinite(n) ? n : NaN; };
+const TOK = /\{\{.*?\}\}/;
+const BOOKKEEPING = ["Previous ad ID","Previous ad name","Notes","Evidence so far"];
+const HAS_TOKEN = o => Object.entries(o).some(([k,v]) => k[0] !== "_" && !BOOKKEEPING.includes(k) && TOK.test(s(v)));
+const isPause = r => /^pause existing/i.test(s(r.Action));
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const esc = t => s(t).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const split = v => s(v).split(/[;,]/).map(x=>x.trim()).filter(Boolean);
+function isoDate(v){
+  if (v instanceof Date) return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");
+  const t = s(v); if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0,10);
+  if (/^\d+(\.\d+)?$/.test(t)) { const d = XLSX.SSF.parse_date_code(+t); return d.y+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0"); }
+  return t;
+}
+
+/* ---------- 1. READ: plan, Editor export, creative files ---------- */
+function readWorkbook(buf){
+  const wb = XLSX.read(buf, {type:"array", cellDates:true}); const p = {};
+  for (const t of TABS){ const ws = wb.Sheets[t]; p[t] = ws ? XLSX.utils.sheet_to_json(ws, {defval:"", raw:true}) : null; }
+  return p;
+}
+function parseDelimited(text){
+  const first = text.split(/\r?\n/)[0]; const sep = (first.split("\t").length > first.split(",").length) ? "\t" : ",";
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i+1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true; else if (c === sep){ row.push(f); f = ""; }
+    else if (c === "\n" || c === "\r"){ if (c === "\r" && text[i+1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; }
+    else f += c;
+  }
+  if (f || row.length){ row.push(f); rows.push(row); }
+  const hdr = (rows.shift() || []).map(h => h.trim());
+  return { headers: hdr, rows: rows.filter(r => r.some(x => x.trim())).map(r => Object.fromEntries(hdr.map((h,i) => [h, (r[i]||"").trim()]))) };
+}
+function readAccountExport(buf){
+  const b = new Uint8Array(buf);
+  const text = (b[0] === 0xFF && b[1] === 0xFE) ? new TextDecoder("utf-16le").decode(buf) : new TextDecoder("utf-8").decode(buf);
+  return parseDelimited(text.replace(/^﻿/, ""));
+}
+function mp4Info(buf){ // reads duration (mvhd) and size (tkhd) without decoding the video
+  const dv = new DataView(buf); let dur = null, w = 0, h = 0;
+  const walk = (start, end) => {
+    let o = start;
+    while (o + 8 <= end){
+      let size = dv.getUint32(o), type = String.fromCharCode(dv.getUint8(o+4),dv.getUint8(o+5),dv.getUint8(o+6),dv.getUint8(o+7)), hdr = 8;
+      if (size === 1){ size = Number(dv.getBigUint64(o+8)); hdr = 16; } else if (size === 0) size = end - o;
+      if (size < 8) break; const c = o + hdr;
+      if (type === "moov" || type === "trak") walk(c, o + size);
+      else if (type === "mvhd"){ const v = dv.getUint8(c); const ts = dv.getUint32(c + (v ? 20 : 12)); const d = v ? Number(dv.getBigUint64(c+24)) : dv.getUint32(c+16); dur = d / ts; }
+      else if (type === "tkhd" && !w){ const v = dv.getUint8(c); const k = v ? 88 : 76; const ww = dv.getUint32(c+k) / 65536, hh = dv.getUint32(c+k+4) / 65536; if (ww && hh){ w = ww; h = hh; } }
+      o += size;
+    }
+  };
+  try { walk(0, buf.byteLength); } catch(e) {}
+  return { w: Math.round(w), h: Math.round(h), dur };
+}
+const EXT_MIME = { png:["image/png"], jpg:["image/jpeg"], jpeg:["image/jpeg"], mp4:["video/mp4"], mov:["video/quicktime"] };
+function sniff(b){ // real type from the file's first bytes, not its name
+  const hex = [...b.slice(0,12)].map(x => x.toString(16).padStart(2,"0")).join("");
+  if (hex.startsWith("89504e47")) return "image/png"; if (hex.startsWith("ffd8ff")) return "image/jpeg";
+  if (hex.slice(8,16) === "66747970"){ const brand = String.fromCharCode(...b.slice(8,12)); return brand === "qt  " ? "video/quicktime" : "video/mp4"; }
+  return "";
+}
+const mediaMeta = file => new Promise(res => { const v = document.createElement("video"), u = URL.createObjectURL(file), done = r => { URL.revokeObjectURL(u); res(r); };
+  v.preload = "metadata"; v.onloadedmetadata = () => done({ w:v.videoWidth, h:v.videoHeight, dur:isFinite(v.duration) ? v.duration : null }); v.onerror = () => done(null); setTimeout(() => done(null), 4000); v.src = u; });
+async function readCreative(file){
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  const info = { name:file.name, ext, bytes:file.size, w:0, h:0, dur:null, kind: /^(mp4|mov)$/.test(ext) ? "Video" : "Image" };
+  try {
+    const buf = await file.arrayBuffer(); info.mime = sniff(new Uint8Array(buf));
+    info.mimeMismatch = !!(EXT_MIME[ext] && info.mime && !EXT_MIME[ext].includes(info.mime) && !(ext === "mov" && info.mime === "video/mp4"));
+    try { const d = await crypto.subtle.digest("SHA-256", buf); info.hash = [...new Uint8Array(d)].map(x => x.toString(16).padStart(2,"0")).join(""); } catch(e) {}
+    if (info.kind === "Video"){ Object.assign(info, mp4Info(buf)); if (!info.w || info.dur === null){ const m = await mediaMeta(file); if (m){ info.w = info.w || m.w; info.h = info.h || m.h; if (info.dur === null) info.dur = m.dur; } } }
+    else { const bm = await createImageBitmap(file); info.w = bm.width; info.h = bm.height; bm.close && bm.close(); }
+  } catch(e){ info.unreadable = true; }
+  return info;
+}
+
+/* ---------- 2. NORMALISE ---------- */
+const LOC_IDS = {"united states":2840,"united kingdom":2826,"canada":2124,"australia":2036,"ireland":2372,"germany":2276,"france":2250,"india":2356,"new zealand":2554,"singapore":2702};
+const COUNTRY = {"united states":"US","united kingdom":"GB","canada":"CA","australia":"AU","ireland":"IE","germany":"DE","france":"FR","india":"IN","new zealand":"NZ","singapore":"SG"};
+const LANG = {"english":"en","french":"fr","german":"de","spanish":"es"};
+const CTAS = ["SIGN_UP","LEARN_MORE","GET_OFFER","DOWNLOAD","CONTACT_US","SUBSCRIBE","APPLY_NOW","BOOK_NOW","GET_QUOTE"];
+const RATIO = {"1x1":1,"4x5":0.8,"9x16":0.5625,"16x9":16/9,"191x1":1.91,"4x1":4};
+const MIN = {"1x1":[300,300],"4x5":[480,600],"9x16":[600,1067],"16x9":[640,360],"191x1":[600,314],"4x1":[512,128]};
+const NAME_RE = /^([A-Z0-9_]+?)_(v\d+)_(1x1|4x5|9x16|16x9|191x1|4x1)(_TEST)?\.(png|jpe?g|mp4|mov)$/i;
+const TEST_OK = ["Ready for testing","Testing"];
+
+function normalise(p){
+  const set = {}; (p.Settings||[]).forEach(r => { if (s(r.Setting)) set[s(r.Setting)] = r.Value; });
+  const days = num(set["Days in month"]) || 30, gdays = num(set["Google billing days per month"]) || 30.4;
+  const rows = t => (p[t]||[]).map((r,i) => ({...r, _row:i+2})).filter(r => Object.entries(r).some(([k,v]) => k !== "_row" && s(v)));
+  const camps = rows("Campaigns").filter(r => s(r.Key)).map(r => {
+    const plat = s(r.Platform), existing = s(r["Existing campaign name (edit in place)"]);
+    return { row:r._row, plat, key:s(r.Key), funnel:s(r.Funnel), geo:s(r.Geo), type:s(r["Campaign type"]), bid:s(r["Bid strategy"]),
+      tcpa:num(r["Target CPA ($)"]), monthly:num(r["Monthly budget ($)"]), level:s(r["Budget level"])||"Campaign", event:s(r["Conversion event"]),
+      locations:s(r.Locations), languages:s(r.Languages), existing, inPlace: !!existing,
+      pmax: /performance max/i.test(s(r["Campaign type"])),
+      name: existing || (plat==="Google"?"GOOG":"META")+"_"+s(r.Funnel)+"_"+s(r.Key)+"_"+s(r.Geo)+"_"+s(set["Month code"]),
+      daily: Math.round(num(r["Monthly budget ($)"]) / (plat==="Google" ? gdays : days)),
+      start: isoDate(set["Start date"]), end: isoDate(set["End date"]), status: s(set["Default status"])||"Paused" };
+  });
+  const concepts = Object.fromEntries(rows("Concepts").map(r => [s(r["Concept ID"]), { id:s(r["Concept ID"]), row:r._row, status:s(r.Status), lp:s(r["Landing path"]),
+    cta:s(r["Primary CTA"]), platforms:s(r.Platforms), claimReq:/^y/i.test(s(r["Claim required"])), claimId:s(r["Claim ID"]), raw:r }]));
+  const claims = Object.fromEntries(rows("Claims").map(r => [s(r["Claim ID"]), r]));
+  const lib = rows("Creative_Library").map(r => { const m = s(r["File name"]).match(NAME_RE);
+    return { row:r._row, file:s(r["File name"]), concept:s(r["Concept ID"]), version:s(r.Version), ratio:s(r.Ratio), kind:s(r["Asset type"]),
+      use:s(r["Used for"]), approval:s(r["Approval status"]), len:num(r["Video length (s)"]), parsed:m }; });
+  return { set, days, gdays, camps, byKey:Object.fromEntries(camps.map(c => [c.key, c])), concepts, claims, lib,
+    kw:rows("Google_Keywords"), neg:rows("Google_Negatives"), rsa:rows("Google_RSAs"), ags:rows("PMax_AssetGroups"), sig:rows("PMax_Signals"),
+    adsets:rows("Meta_AdSets"), ads:rows("Meta_Ads"), variants:rows("Variants"), missingTabs: TABS.filter(t => !p[t]) };
+}
+
+/* ---------- 3. DERIVE: concept gates, test ads, creative mapping ---------- */
+function conceptGate(P, id){ // why a concept may not export (null = fine)
+  const c = P.concepts[id]; if (!c) return { msg:`Concept "${id}" isn't on the Concepts tab.`, hard:true };
+  if (c.status === "Retired") return { msg:`Concept ${id} is Retired.`, hard:true };
+  if (c.claimReq){
+    const cl = P.claims[c.claimId];
+    if (!cl) return { msg:`Concept ${id} needs claim ${c.claimId||"(no Claim ID)"}, which isn't on the Claims tab.`, claim:true };
+    const ok = s(cl["Approval status"]) === "Approved" && s(cl["Evidence / source"]) && s(cl["Approved by"]) && s(cl["Date approved"]) && !HAS_TOKEN(cl);
+    if (!ok) return { msg:`Concept ${id} makes a claim (${c.claimId}) that isn't approved with a source, approver and date.`, claim:true };
+  }
+  return null;
+}
+const latestVersion = (P, con) => P.lib.filter(l => l.concept === con).map(l => l.version).sort((a,b) => (+b.slice(1)) - (+a.slice(1)))[0] || "v1";
+function pick(P, con, version, kind, ratios){
+  for (const r of ratios){ const f = P.lib.find(l => l.concept === con && l.kind === kind && l.ratio === r && l.approval !== "Retired" && (!version || l.version === version)); if (f) return f; }
+  return null;
+}
+function testAds(P){
+  const out = [];
+  P.adsets.filter(a => s(a["Test concept ID"])).forEach(as => {
+    const con = s(as["Test concept ID"]), C = P.concepts[con] || {}, vs = P.variants.filter(v => s(v["Concept ID"]) === con);
+    const hooks = vs.filter(v => s(v.Element) === "Hook"), heads = vs.filter(v => s(v.Element) === "Headline"), desc = vs.find(v => s(v.Element) === "Description");
+    const ver = latestVersion(P, con), fmtA = (C.raw && /video/i.test(s(C.raw.Formats))) ? "Video" : "Image";
+    hooks.forEach(h => heads.forEach(t => out.push({ "Campaign key":s(as["Campaign key"]), "Ad set name":s(as["Ad set name"]),
+      "Ad name":`${con}_${ver}_${s(h.Code)}_${s(t.Code)}`, "Concept ID":con, Execution:ver, "Hook code":s(h.Code), "Headline code":s(t.Code), Format:fmtA,
+      "Primary text":s(h.Text), Headline:s(t.Text), Description:desc ? s(desc.Text) : "", "Call to action (blank = concept's)":"",
+      _row:`Variants (${con} ${s(h.Code)}×${s(t.Code)})`, _test:true, _tok: TOK.test(s(h.Text)+s(t.Text)+(desc?s(desc.Text):"")) })));
+  });
+  return out;
+}
+function metaCreative(P, ad){
+  const over = s(ad["Creative override (optional)"]);
+  if (over) return { feed:{ file:over, approval:"(override)" }, story:null };
+  const kind = s(ad.Format) === "Video" ? "Video" : "Image", con = s(ad["Concept ID"]), ver = s(ad.Execution);
+  return { feed: pick(P, con, ver, kind, ["4x5","1x1"]) || pick(P, con, "", kind, ["4x5","1x1"]), story: pick(P, con, ver, kind, ["9x16"]) || pick(P, con, "", kind, ["9x16"]) };
+}
+function pmaxAssets(P, ag){
+  const cons = [...split(ag["Concept IDs (; separated)"]), "BRAND_LOGO"].filter((v,i,a) => a.indexOf(v) === i);
+  const files = P.lib.filter(l => cons.includes(l.concept) && l.approval !== "Retired");
+  const slot = (kind, ratio) => files.filter(l => l.kind === kind && l.ratio === ratio);
+  return { cons, landscape:slot("Image","191x1"), square:slot("Image","1x1"), portrait:slot("Image","4x5"),
+    logo:slot("Logo","1x1"), logoWide:slot("Logo","4x1"), video:files.filter(l => l.kind === "Video" && ["16x9","9x16","1x1"].includes(l.ratio)) };
+}
+
+/* ---------- 4. CHECK ---------- */
+function validate(P, ctx){
+  const out = []; let HOLD = null; const add = (level, plat, where, msg, draft, hold) => out.push({level, plat, where, msg, draft, hold: hold || HOLD});
+  P.missingTabs.forEach(t => add("error","all",t,"Tab is missing. Use the v2 plan template."));
+  const S = P.set;
+  ["Brand name","Landing domain","Month code","Days in month","Start date","End date"].forEach(k => { if (!s(S[k])) add("error","all","Settings",`"${k}" is empty.`); });
+  if (s(S["Landing domain"]) && !/^https:\/\//.test(s(S["Landing domain"]))) add("error","all","Settings","Landing domain must start with https://");
+  if (/example\.com/.test(s(S["Landing domain"]))) add("warn","all","Settings","Landing domain is still the placeholder example.com.");
+
+  // campaigns
+  const seenK = {}, seenN = {};
+  P.camps.forEach(c => { const w = `Campaigns row ${c.row}`, pl = c.pmax ? "pmax" : c.plat.toLowerCase(); HOLD = ["c:"+c.key];
+    if (!["Google","Meta"].includes(c.plat)) add("error",pl,w,`Platform must be Google or Meta.`);
+    if (seenK[c.key]) add("error",pl,w,`Key "${c.key}" is used twice.`); seenK[c.key] = 1;
+    if (seenN[c.name]) add("error",pl,w,`Campaign name ${c.name} is duplicated.`); seenN[c.name] = 1;
+    if (!(c.monthly > 0)) add("error",pl,w,"Monthly budget must be above 0.");
+    if (c.plat === "Google" && !c.pmax){
+      if (/target cpa/i.test(c.bid) && !(c.tcpa > 0)) add("error",pl,w,"Bid strategy is Target CPA but Target CPA is empty.");
+      split(c.locations).forEach(l => { if (!LOC_IDS[l.toLowerCase()]) add("error",pl,w,`Location "${l}" isn't in LOC_IDS.`); });
+    }
+    if (c.pmax && !c.inPlace) add("warn","pmax",w,"PMax has no existing campaign name, so it would be created new. The agreed plan is to edit the live one in place.");
+    if (c.inPlace && TOK.test(c.existing)) add("error","pmax",w,`Existing campaign name is still a placeholder (${c.existing}). Copy the exact name from Google Ads.`);
+    HOLD = null;
+  });
+  ["Meta","Google"].forEach(pl => {
+    const built = P.camps.filter(c => c.plat===pl).reduce((a,c)=>a+(c.monthly||0),0);
+    const extra = pl==="Meta" ? num(S["Meta conditional reserve (not built)"])||0 : num(S["Google PMax US – existing (not built)"])||0;
+    const target = num(S[pl+" platform budget"]);
+    if (target > 0 && Math.abs(built+extra-target) > 1) add("warn","all","Budget",`${pl}: planned $${fmt(built+extra)} but the brief says $${fmt(target)}.`);
+  });
+
+  // concepts, claims, library
+  Object.values(P.concepts).forEach(c => {
+    const g = conceptGate(P, c.id);
+    if (g && g.claim) add("warn","all",`Concepts row ${c.row}`, g.msg + " Its ads are blocked until then.");
+    if (c.lp && !/^\//.test(c.lp)) add("error","all",`Concepts row ${c.row}`,"Landing path must start with /",undefined,["concept:"+c.id]);
+  });
+  const libNames = {};
+  P.lib.forEach(l => { const w = `Creative_Library row ${l.row} (${l.file})`; HOLD = ["file:"+l.file];
+    if (libNames[l.file]) add("error","all",w,"File listed twice."); libNames[l.file] = 1;
+    if (!l.parsed) add("error","all",w,"Name doesn't follow CONCEPT_version_ratio.ext (e.g. CASE_STUDY_v2_4x5.png).");
+    else { if (l.parsed[1] !== l.concept) add("error","all",w,`Name says concept ${l.parsed[1]}, the row says ${l.concept}.`);
+      if (l.parsed[2] !== l.version) add("error","all",w,`Name says ${l.parsed[2]}, the row says ${l.version}.`);
+      if (l.parsed[3] !== l.ratio) add("error","all",w,`Name says ratio ${l.parsed[3]}, the row says ${l.ratio}.`); }
+    if (!P.concepts[l.concept]) add("error","all",w,`Concept ${l.concept} isn't on the Concepts tab.`);
+    if (ctx.files && !ctx.files[l.file] && l.approval !== "Retired") add("warn","all",w,"Not among the creative files you added.");
+    HOLD = null;
+  });
+  if (ctx.files) Object.values(ctx.files).forEach(f => {
+    const l = P.lib.find(x => x.file === f.name); const w = `Creative file ${f.name}`; HOLD = ["file:"+f.name];
+    if (!l){ add("warn","all",w,"Not listed in Creative_Library, so nothing will use it."); return; }
+    if (f.unreadable || !f.w){ add("warn","all",w,"Couldn't read its size in this browser."); return; }
+    const want = RATIO[l.ratio], got = f.w / f.h;
+    if (Math.abs(got - want) / want > 0.01) add("error","all",w,`Is ${f.w}×${f.h} (${got.toFixed(2)}:1) but is listed as ${l.ratio}.`);
+    const mn = MIN[l.ratio]; if (mn && (f.w < mn[0] || f.h < mn[1])) add("error","all",w,`${f.w}×${f.h} is below the ${mn[0]}×${mn[1]} minimum.`);
+    if (l.kind !== "Video" && f.bytes > 5120*1024 && /pmax/i.test(l.use)) add("error","pmax",w,"Over PMax's 5,120 KB image limit.");
+    if (l.kind === "Video" && f.dur !== null && /pmax/i.test(l.use) && f.dur < 10) add("error","pmax",w,`Video is ${f.dur.toFixed(1)}s; PMax needs at least 10s.`);
+    if (f.mimeMismatch) add("error","all",w,`The file's real type is ${f.mime || "unknown"}, which doesn't match its .${f.ext} extension. Re-export it.`);
+    if (l.kind !== "Video" && f.bytes > 30*1024*1024) add("error","meta",w,"Over Meta's 30 MB image limit.");
+    if (l.kind === "Video" && f.bytes > 4*1024*1024*1024) add("error","meta",w,"Over Meta's 4 GB video limit.");
+    if (l.kind === "Video" && f.dur === null) add("warn","all",w,"Couldn't read the video length in this browser; check it manually.");
+    HOLD = null;
+  });
+  if (ctx.files){ const byHash = {}; Object.values(ctx.files).filter(f => f.hash).forEach(f => (byHash[f.hash] = byHash[f.hash] || []).push(f.name));
+    Object.values(byHash).filter(n => n.length > 1).forEach(n => add("warn","all","Creative files",`Identical content under different names: ${n.join(", ")}. Check one isn't a mislabelled copy.`)); }
+
+  // Google Search (v1 rules)
+  const gKey = (r, w, pl) => { const c = P.byKey[s(r["Campaign key"])]; if (!c) add("error",pl,w,`Campaign key "${s(r["Campaign key"])}" doesn't match any campaign.`); return c; };
+  const tok = (r, w, pl) => { if (HAS_TOKEN(r)) add("error",pl,w,"Contains a {{placeholder}}."); };
+  const agKw = {}, agAd = {}, kwSeen = {};
+  P.kw.forEach(r => { const w = `Google_Keywords row ${r._row}`; HOLD = ["kw:"+r._row]; gKey(r,w,"google"); tok(r,w,"google");
+    const k = s(r.Keyword), m = s(r["Match type"]);
+    if (/[!@%,*^=;~`<>?\\|]/.test(k.replace(/\{\{.*?\}\}/g,""))) add("error","google",w,`Keyword "${k}" has a character Google doesn't allow.`);
+    if (!["Exact","Phrase","Broad"].includes(m)) add("error","google",w,"Match type must be Exact, Phrase or Broad.");
+    const id = [r["Campaign key"],r["Ad group"],k.toLowerCase(),m].join("|"); if (kwSeen[id]) add("warn","google",w,`Duplicate keyword "${k}".`); kwSeen[id]=1;
+    agKw[s(r["Campaign key"])+"|"+s(r["Ad group"])] = 1; HOLD = null; });
+  P.neg.forEach(r => { const w = `Google_Negatives row ${r._row}`; HOLD = ["neg:"+r._row]; gKey(r,w,"google"); tok(r,w,"google"); HOLD = null; });
+  P.rsa.forEach(r => { const w = `Google_RSAs row ${r._row} (${s(r["Ad group"])})`; HOLD = ["ag:"+s(r["Campaign key"])+"|"+s(r["Ad group"])]; gKey(r,w,"google"); tok(r,w,"google");
+    const H = [...Array(15)].map((_,i)=>s(r["Headline "+(i+1)])).filter(Boolean), D = [...Array(4)].map((_,i)=>s(r["Description "+(i+1)])).filter(Boolean);
+    if (H.length < 3) add("error","google",w,"Needs at least 3 headlines."); if (D.length < 2) add("error","google",w,"Needs at least 2 descriptions.");
+    H.forEach(h => { if (h.length > 30) add("error","google",w,`Headline "${h}" is ${h.length} characters (limit 30).`); });
+    D.forEach(d => { if (d.length > 90) add("error","google",w,`A description is ${d.length} characters (limit 90).`); });
+    ["Path 1","Path 2"].forEach(k => { if (s(r[k]).length > 15) add("error","google",w,`${k} is over 15 characters.`); });
+    agAd[s(r["Campaign key"])+"|"+s(r["Ad group"])] = 1; HOLD = null; });
+  Object.keys(agKw).forEach(k => { if (!agAd[k]) add("error","google","Google_RSAs",`Ad group ${k.replace("|"," → ")} has keywords but no ad.`,undefined,["ag:"+k]); });
+
+  // PMax
+  const pm = P.camps.find(c => c.pmax);
+  if (pm){
+    if (!s(S["Google tracking verified on"])) add("error","pmax","Settings","'Google tracking verified on' is empty. PMax learns only from Google's conversion data, so the export stays blocked until tracking on the v3 signup flow is confirmed.");
+    const A = ctx.acct;
+    if (!A) add("error","pmax","Editor export","Upload a Google Ads Editor export of the current campaign (Account → Export → CSV) so the generator can prove it's editing, not creating.");
+    else if (pm.inPlace && !TOK.test(pm.existing)){
+      const cc = col(A, "Campaign"), agc = col(A, "Asset Group");
+      const names = [...new Set(A.rows.map(r => r[cc]).filter(Boolean))];
+      const exact = names.filter(n => n === pm.existing), loose = names.filter(n => n !== pm.existing && n.trim().toLowerCase() === pm.existing.trim().toLowerCase());
+      if (!exact.length) add("error","pmax","Editor export",`Campaign "${pm.existing}" isn't in the export${loose.length ? ` (closest: "${loose[0]}", which differs in case or spaces)` : ""}. Importing would create a NEW campaign.`);
+      const existingAGs = new Set(A.rows.filter(r => r[cc] === pm.existing && agc && r[agc]).map(r => r[agc]));
+      if (!agc) add("warn","pmax","Editor export","The export has no 'Asset Group' column, so asset group names can't be checked. Export the PMax campaign including asset groups.");
+      P.ags.forEach(r => { const n = s(r["Asset group"]), w = `PMax_AssetGroups row ${r._row} (${n})`;
+        if (isPause(r)){ if (agc && !TOK.test(n) && !existingAGs.has(n)) add("error","pmax",w,"Marked 'Pause existing' but isn't in the campaign. Check the exact name."); }
+        else if (existingAGs.has(n)) add("error","pmax",w,"A new asset group with this name already exists in the campaign. Rename it.");
+      });
+    }
+  }
+  P.ags.forEach(r => { const n = s(r["Asset group"]), w = `PMax_AssetGroups row ${r._row} (${n})`, isNew = !isPause(r);
+    if (!pm) { add("error","pmax",w,"No Performance Max campaign on the Campaigns tab."); return; }
+    if (!isNew){ if (TOK.test(n)) add("error","pmax",w,"Name the existing asset group to pause (copy it from Google Ads)."); return; }
+    const H = [...Array(15)].map((_,i)=>s(r["Headline "+(i+1)])).filter(Boolean), LH = [...Array(5)].map((_,i)=>s(r["Long headline "+(i+1)])).filter(Boolean),
+          D = [...Array(5)].map((_,i)=>s(r["Description "+(i+1)])).filter(Boolean), bn = s(r["Business name (blank = Settings)"]) || s(S["PMax business name"]);
+    if (H.length < 3 || H.length > 15) add("error","pmax",w,`Needs 3–15 headlines (has ${H.length}).`);
+    if (H.length && !H.some(h => h.length <= 15)) add("error","pmax",w,"At least one headline must be 15 characters or fewer.");
+    H.forEach(h => { if (h.length > 30) add("error","pmax",w,`Headline "${h}" is over 30 characters.`); });
+    if (LH.length < 1) add("error","pmax",w,"Needs at least 1 long headline."); LH.forEach(h => { if (h.length > 90) add("error","pmax",w,"A long headline is over 90 characters."); });
+    if (D.length < 2) add("error","pmax",w,"Needs at least 2 descriptions."); if (D.length && !D.some(d => d.length <= 60)) add("error","pmax",w,"At least one description must be 60 characters or fewer.");
+    D.forEach(d => { if (d.length > 90) add("error","pmax",w,"A description is over 90 characters."); });
+    if (!bn || bn.length > 25) add("error","pmax",w,"Business name is missing or over 25 characters.");
+    if (H.length < 11) add("warn","pmax",w,`${H.length} headlines; Google recommends 11+.`);
+    if (!/^\//.test(s(r["Final URL path"]))) add("error","pmax",w,"Final URL path must start with /");
+    const a = pmaxAssets(P, r);
+    a.cons.forEach(cid => { if (cid === "BRAND_LOGO") return; const g = conceptGate(P, cid); if (g) add("error","pmax",w,g.msg);
+      const c = P.concepts[cid]; if (c && !/pmax|both/i.test(c.platforms)) add("warn","pmax",w,`Concept ${cid} isn't marked for PMax.`);
+      if (c && c.status !== "Validated") add("warn","pmax",w,`Concept ${cid} is "${c.status}"; always-on PMax expects Validated concepts.`); });
+    const lps = a.cons.map(c => P.concepts[c] && P.concepts[c].lp).filter(x => x && x !== "/");
+    if (lps.length && !lps.includes(s(r["Final URL path"]))) add("warn","pmax",w,`Final URL ${s(r["Final URL path"])} doesn't match any of its concepts' landing pages (${[...new Set(lps)].join(", ")}).`);
+    if (!a.landscape.length) add("error","pmax",w,"No landscape (1.91:1) image from its concepts. Google requires one.");
+    if (!a.square.length) add("error","pmax",w,"No square (1:1) image from its concepts. Google requires one.");
+    if (!a.logo.length) add("error","pmax",w,"No square logo (BRAND_LOGO 1x1).");
+    if (!a.video.length) add("warn","pmax",w,"No video. Google may auto-generate one from your images. Add a 16:9 video to stay in control.");
+    const imgs = a.landscape.length + a.square.length + a.portrait.length; if (imgs > 20) add("error","pmax",w,`${imgs} images (max 20).`);
+    if (a.video.length > 15) add("error","pmax",w,"More than 15 videos.");
+    const unap = [...a.landscape,...a.square,...a.portrait,...a.logo,...a.logoWide,...a.video].filter(l => l.approval !== "Approved");
+    if (unap.length) add("error","pmax",w,`${unap.length} of its files aren't Approved (${[...new Set(unap.map(l => l.approval || "blank"))].join(", ")}), e.g. ${unap[0].file}.`, "allow");
+  });
+  P.sig.forEach(r => { if (!P.ags.some(a => s(a["Asset group"]) === s(r["Asset group"]))) add("error","pmax",`PMax_Signals row ${r._row}`,`Asset group "${s(r["Asset group"])}" isn't on PMax_AssetGroups.`); });
+  if (P.sig.some(r => s(r["Signal type"]) === "Audience signal")) add("warn","pmax","PMax_Signals","Audience signals are set in Google Ads after Stage 1 (not in the file). They're hints, not targeting.");
+
+  // Meta
+  if (P.camps.some(c => c.plat === "Meta")){
+    ["Facebook Page ID","Instagram account ID","Meta Pixel ID"].forEach(k => { const v = s(S[k]);
+      if (!v || TOK.test(v)) add("error","meta","Settings",`"${k}" is ${v ? "still a placeholder" : "empty"}.`, "allow"); });
+    if (!s(S["Meta tracking verified on"])) add("warn","meta","Settings","'Meta tracking verified on' is empty. Ad-level results will be unreliable until Pixel + Conversions API are confirmed on v3.");
+  }
+  const noId = {}, asSeen = {};
+  P.adsets.forEach(r => { const w = `Meta_AdSets row ${r._row}`; HOLD = ["as:"+s(r["Ad set name"])]; gKey(r,w,"meta"); tok(r,w,"meta"); asSeen[s(r["Ad set name"])] = 1;
+    ["Include audiences","Exclude audiences"].forEach(k => split(s(r[k]).replace(/;/g,";")).forEach(a => { if (!/^\d+:/.test(a) && !/advantage\+ audience|broad/i.test(a)) (noId[a] = noId[a] || []).push(s(r["Ad set name"])); }));
+    const tc = s(r["Test concept ID"]);
+    if (tc){ const c = P.concepts[tc];
+      if (c && !TEST_OK.includes(c.status)) add("error","meta",w,`Test concept ${tc} is "${c.status}". Test ad sets need "Ready for testing" or "Testing".${c.status === "In production" ? " Swap in a ready concept (e.g. BEFORE_AFTER_WORKFLOW) or finish this one." : ""}`);
+      const g = conceptGate(P, tc); if (g) add("error","meta",w,g.msg + " Its test ads won't export.");
+      if (!P.variants.some(v => s(v["Concept ID"]) === tc && s(v.Element) === "Hook")) add("error","meta",w,`No Hook rows for ${tc} on Variants.`); }
+    HOLD = null;
+  });
+  Object.entries(noId).forEach(([a, rs]) => add("error","meta",`Meta_AdSets: ${[...new Set(rs)].join(", ")}`,`Audience "${a}" needs its Meta ID (ID:Name). Only the ad sets that use it are held back.`, "allow", [...new Set(rs)].map(n => "as:"+n)));
+  const allAds = [...P.ads, ...testAds(P)]; const adNames = {}, unapproved = [];
+  allAds.forEach(r => { const w = r._test ? r._row : `Meta_Ads row ${r._row} (${s(r["Ad name"])})`; HOLD = ["ad:"+s(r["Ad name"])];
+    if (adNames[s(r["Ad name"])]) add("error","meta",w,`Ad name ${s(r["Ad name"])} is used twice.`); adNames[s(r["Ad name"])] = 1;
+    if (!asSeen[s(r["Ad set name"])]) add("error","meta",w,`Ad set "${s(r["Ad set name"])}" isn't on Meta_AdSets.`);
+    if (!r._test) tok(r,w,"meta"); else if (r._tok) add("error","meta",w,"Contains a {{placeholder}}.");
+    const con = s(r["Concept ID"]), C = P.concepts[con];
+    if (!r._test){ const g = conceptGate(P, con); if (g) add("error","meta",w,g.msg);
+      else if (C && C.status !== "Validated") add("warn","meta",w,`Concept ${con} is "${C.status}" but runs always-on. Validated is expected.`); }
+    const cr = metaCreative(P, r);
+    if (!cr.feed) add("error","meta",w,`No ${s(r.Format).toLowerCase()} file for ${con}${s(r.Execution)?" "+s(r.Execution):""} in 4:5 or 1:1.`);
+    else if (cr.feed.approval && cr.feed.approval !== "Approved" && cr.feed.approval !== "(override)") unapproved.push(s(r["Ad name"]));
+    if (s(r["Primary text"]).length > 125) add("warn","meta",w,"Primary text over 125 characters gets cut off.");
+    if (s(r.Headline).length > 40) add("warn","meta",w,"Headline over 40 characters may be cut off.");
+    const cta = s(r["Call to action (blank = concept's)"]) || (C && C.cta); if (cta && !CTAS.includes(cta)) add("error","meta",w,`Call to action "${cta}" isn't accepted.`);
+    HOLD = null;
+  });
+  const noPrev = P.ads.filter(r => TOK.test(s(r["Previous ad ID"]))).length;
+  if (noPrev) add("warn","meta","Meta_Ads",`${noPrev} ads still have a placeholder Previous ad ID. Fill them from Ads Manager to keep reporting history linked.`);
+  if (unapproved.length) add("error","meta","Creative_Library",`${unapproved.length} Meta ads map to files that aren't Approved (TEST stand-ins): ${unapproved.slice(0,3).join(", ")}${unapproved.length>3?"…":""}. Swap in approved files. Only those ads are held back.`, "allow", unapproved.map(n => "ad:"+n));
+  [["Google_Keywords",P.kw],["Google_RSAs",P.rsa],["PMax_AssetGroups",P.ags],["Meta_Ads",P.ads],["Variants",P.variants]].forEach(([t,rs]) => {
+    const n = rs.filter(r => s(r.PLACEHOLDER).toUpperCase() === "Y").length; if (n) add("warn","all",t,`${n} rows marked PLACEHOLDER. Replace before launch.`); });
+  return out;
+}
+
+/* ---------- 5. TRANSLATE ---------- */
+// Google Ads Editor column names; matched to the uploaded export's own spelling when present
+function col(A, canon){ if (!A) return canon; const k = canon.toLowerCase().replace(/[^a-z0-9]/g,""); return A.headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g,"") === k) || null; }
+const colOr = (A, canon) => col(A, canon) || canon;
+const G_COLS = ["Campaign","Campaign Type","Networks","Budget","Budget type","Bid Strategy Type","Target CPA","Languages","Location ID","Campaign Status","Start Date","End Date","Final URL suffix",
+  "Ad Group","Ad Group Status","Keyword","Criterion Type","Max CPC","Ad type","Final URL",...[...Array(15)].map((_,i)=>"Headline "+(i+1)),...[...Array(4)].map((_,i)=>"Description "+(i+1)),"Path 1","Path 2","Status"];
+function buildGoogle(P, HD){
+  HD = HD || new Set(); const rows = [], R = o => rows.push(o), dom = s(P.set["Landing domain"]).replace(/\/$/,"");
+  P.camps.filter(c => c.plat === "Google" && !c.pmax && !HD.has("c:"+c.key)).forEach(c => {
+    R({"Campaign":c.name,"Campaign Type":"Search","Networks":"Google search","Budget":c.daily,"Budget type":"Daily",
+       "Bid Strategy Type":/target cpa|maximi[sz]e conversions/i.test(c.bid) ? "Maximize conversions" : c.bid, "Target CPA":c.tcpa > 0 ? c.tcpa : "",
+       "Languages":split(c.languages).map(l => LANG[l.toLowerCase()] || l).join(";"),"Campaign Status":c.status,"Start Date":c.start,"End Date":c.end,
+       "Final URL suffix":`utm_source=${s(P.set["Google utm_source"])||"google"}&utm_medium=${s(P.set["Google utm_medium"])||"cpc"}&utm_campaign=${c.name}&utm_term={keyword}&utm_content={creative}`});
+    split(c.locations).forEach(l => R({"Campaign":c.name,"Location ID":LOC_IDS[l.toLowerCase()] || ""}));
+    [...new Set([...P.kw,...P.rsa].filter(r => s(r["Campaign key"]) === c.key).map(r => s(r["Ad group"])))].filter(ag => !HD.has("ag:"+c.key+"|"+ag)).forEach(ag => {
+      R({"Campaign":c.name,"Ad Group":ag,"Ad Group Status":"Enabled"});
+      P.kw.filter(r => s(r["Campaign key"]) === c.key && s(r["Ad group"]) === ag && !HD.has("kw:"+r._row)).forEach(r => R({"Campaign":c.name,"Ad Group":ag,"Keyword":s(r.Keyword),"Criterion Type":s(r["Match type"]),"Max CPC":s(r["Max CPC ($, optional)"]),"Status":"Enabled"}));
+      P.rsa.filter(r => s(r["Campaign key"]) === c.key && s(r["Ad group"]) === ag).forEach(r => { const o = {"Campaign":c.name,"Ad Group":ag,"Ad type":"Responsive search ad","Final URL":dom+s(r["Landing path"]),"Path 1":s(r["Path 1"]),"Path 2":s(r["Path 2"]),"Status":"Enabled"};
+        for (let i=1;i<=15;i++) o["Headline "+i] = s(r["Headline "+i]); for (let i=1;i<=4;i++) o["Description "+i] = s(r["Description "+i]); R(o); });
+    });
+    P.neg.filter(r => s(r["Campaign key"]) === c.key && !HD.has("neg:"+r._row)).forEach(r => R({"Campaign":c.name,"Keyword":s(r["Negative keyword"]),"Criterion Type":"Campaign Negative "+s(r["Match type"])}));
+  });
+  return rows;
+}
+function pmaxCols(A){
+  const base = ["Campaign","Budget","Budget type","Asset Group","Asset Group Status","Final URL","Path 1","Path 2","Business name",
+    ...[...Array(15)].map((_,i)=>"Headline "+(i+1)),...[...Array(5)].map((_,i)=>"Long headline "+(i+1)),...[...Array(5)].map((_,i)=>"Description "+(i+1)),"Search theme"];
+  return base.map(c => [c, colOr(A, c)]);
+}
+function buildPmax(P, A, stage, draft){
+  const pm = P.camps.find(c => c.pmax); if (!pm) return [];
+  const dom = s(P.set["Landing domain"]).replace(/\/$/,""), rows = [], C = Object.fromEntries(pmaxCols(A));
+  const R = o => rows.push(Object.fromEntries(Object.entries(o).map(([k,v]) => [C[k] || k, v])));
+  const fresh = P.ags.filter(r => !isPause(r) && !(draft && HAS_TOKEN(r)) && !r._blocked);
+  if (stage === 1){
+    fresh.forEach(r => { const o = {"Campaign":pm.name,"Asset Group":s(r["Asset group"]),"Asset Group Status":"Paused","Final URL":dom+s(r["Final URL path"]),
+      "Path 1":s(r["Path 1"]),"Path 2":s(r["Path 2"]),"Business name":s(r["Business name (blank = Settings)"]) || s(P.set["PMax business name"])};
+      for (let i=1;i<=15;i++) o["Headline "+i] = s(r["Headline "+i]); for (let i=1;i<=5;i++){ o["Long headline "+i] = s(r["Long headline "+i]); o["Description "+i] = s(r["Description "+i]); }
+      R(o);
+      P.sig.filter(x => s(x["Asset group"]) === s(r["Asset group"]) && s(x["Signal type"]) === "Search theme" && !(draft && HAS_TOKEN(x))).forEach(x => R({"Campaign":pm.name,"Asset Group":s(r["Asset group"]),"Search theme":s(x.Value)}));
+    });
+  } else {
+    R({"Campaign":pm.name,"Budget":pm.daily,"Budget type":"Daily"});                  // only name + budget: everything else unchanged
+    fresh.forEach(r => R({"Campaign":pm.name,"Asset Group":s(r["Asset group"]),"Asset Group Status":"Enabled"}));
+    P.ags.filter(r => isPause(r) && !(draft && HAS_TOKEN(r))).forEach(r => R({"Campaign":pm.name,"Asset Group":s(r["Asset group"]),"Asset Group Status":"Paused"}));
+  }
+  return rows;
+}
+const M_COLS = ["Campaign Name","Campaign Status","Campaign Objective","Buying Type","Campaign Daily Budget","Ad Set Name","Ad Set Run Status","Ad Set Time Start","Ad Set Time Stop","Ad Set Daily Budget",
+  "Optimization Goal","Billing Event","Pixel ID","Conversion Event","Countries","Age Min","Age Max","Gender","Custom Audiences","Excluded Custom Audiences",
+  "Ad Name","Ad Status","Title","Body","Link Description","Link","URL Tags","Call to Action","Image File Name","Video File Name","Link Object ID","Instagram Account ID"];
+function buildMeta(P, draft, HD){
+  HD = HD || new Set();
+  const rows = [], dom = s(P.set["Landing domain"]).replace(/\/$/,""), sv = k => { const v = s(P.set[k]); return TOK.test(v) ? "" : v; };
+  const aud = v => split(v).filter(a => /^\d+:/.test(a)).join(", ");
+  const blocked = r => { const g = conceptGate(P, s(r["Concept ID"])); if (g) return true; if (r._test){ const C = P.concepts[s(r["Concept ID"])]; if (!C || !TEST_OK.includes(C.status)) return true; } return false; };
+  const ads = [...P.ads, ...testAds(P)].filter(r => !blocked(r) && !HD.has("ad:"+s(r["Ad name"])) && !HD.has("concept:"+s(r["Concept ID"])));
+  P.camps.filter(c => c.plat === "Meta" && !HD.has("c:"+c.key)).forEach(c => {
+    const allSets = P.adsets.filter(r => s(r["Campaign key"]) === c.key), sets = allSets.filter(r => !HD.has("as:"+s(r["Ad set name"])));
+    sets.forEach(as => ads.filter(a => s(a["Ad set name"]) === s(as["Ad set name"])).forEach(ad => {
+      const C = P.concepts[s(ad["Concept ID"])] || {}, cr = metaCreative(P, ad); if (!cr.feed || HD.has("file:"+cr.feed.file)) return;
+      if (!draft && cr.feed.approval && !["Approved","(override)"].includes(cr.feed.approval)) return;
+      const file = cr.feed.file, isVid = s(ad.Format) === "Video";
+      rows.push({"Campaign Name":c.name,"Campaign Status":c.status.toUpperCase(),"Campaign Objective":"Outcome Sales","Buying Type":"AUCTION",
+        "Campaign Daily Budget":c.level === "Campaign" ? c.daily : "","Ad Set Name":s(as["Ad set name"]),"Ad Set Run Status":c.status.toUpperCase(),
+        "Ad Set Time Start":c.start+" 00:00","Ad Set Time Stop":c.end+" 23:59",
+        "Ad Set Daily Budget":c.level === "Ad set" ? Math.round(c.monthly/P.days/allSets.length) : "",
+        "Optimization Goal":"OFFSITE_CONVERSIONS","Billing Event":"IMPRESSIONS","Pixel ID":sv("Meta Pixel ID"),"Conversion Event":s(as["Conversion event"]) || c.event,
+        "Countries":split(as.Countries).map(x => COUNTRY[x.toLowerCase()]).filter(Boolean).join(", "),"Age Min":s(as["Age min"]),"Age Max":s(as["Age max"]),"Gender":/all/i.test(s(as.Gender)) ? "" : s(as.Gender),
+        "Custom Audiences":aud(as["Include audiences"]),"Excluded Custom Audiences":aud(as["Exclude audiences"]),
+        "Ad Name":s(ad["Ad name"]),"Ad Status":"ACTIVE","Title":s(ad.Headline),"Body":s(ad["Primary text"]),"Link Description":s(ad.Description),
+        "Link":dom + (s(ad["Landing path override (optional)"]) || C.lp || "/"),
+        "URL Tags":`utm_source=${s(P.set["Meta utm_source"])||"facebook"}&utm_medium=${s(P.set["Meta utm_medium"])||"paid_social"}&utm_campaign=${c.name}&utm_content=${s(ad["Ad name"])}`,
+        "Call to Action":s(ad["Call to action (blank = concept's)"]) || C.cta || "SIGN_UP",
+        "Image File Name":isVid ? "" : file,"Video File Name":isVid ? file : "","Link Object ID":sv("Facebook Page ID"),"Instagram Account ID":sv("Instagram account ID"),
+        _story: cr.story ? cr.story.file : ""});
+    }));
+  });
+  return rows;
+}
+// Ad map for the performance workbook (IN_AdMap): every Meta ad → concept, execution, hook; previous ad names keep history linked
+const MAP_COLS = ["Ad name (exact)","Concept ID","Execution","Hook code"];
+function buildAdMap(P){
+  const rows = [...P.ads, ...testAds(P)].map(a => ({"Ad name (exact)":s(a["Ad name"]),"Concept ID":s(a["Concept ID"]),"Execution":s(a.Execution),"Hook code":s(a["Hook code"])}));
+  P.ads.filter(a => s(a["Previous ad name"])).forEach(a => rows.push({"Ad name (exact)":s(a["Previous ad name"]),"Concept ID":s(a["Concept ID"]),"Execution":"previous","Hook code":""}));
+  return rows;
+}
+const cell = (v, sep) => { const t = s(v); return (t.includes(sep)||t.includes('"')||t.includes("\n")) ? '"'+t.replace(/"/g,'""')+'"' : t; };
+const toText = (rows, sep, cols) => [cols.join(sep), ...rows.map(r => cols.map(c => cell(r[c], sep)).join(sep))].join("\r\n");
+const pmaxOrder = rows => pmaxCols(STATE.acct).map(x => x[1]).filter(c => rows.some(r => s(r[c])));
+const usedCols = rows => { const seen = []; rows.forEach(r => Object.keys(r).forEach(k => { if (k[0] !== "_" && s(r[k]) && !seen.includes(k)) seen.push(k); })); return seen; };
+
+/* ---------- 6. EVIDENCE (pre-launch estimate) ---------- */
+// 90% interval for a Poisson count (Wilson–Hilferty); turns "13 trials" into a CPA range
+function poissonCI(k, z = 1.645){ const lo = k <= 0 ? 0 : k * Math.pow(1 - 1/(9*k) - z/(3*Math.sqrt(k)), 3), k1 = k + 1, hi = k1 * Math.pow(1 - 1/(9*k1) + z/(3*Math.sqrt(k1)), 3); return [Math.max(0, lo), hi]; }
+function evidence(P){
+  const sets = P.adsets.filter(a => s(a["Test concept ID"])); if (!sets.length) return null;
+  const keys = [...new Set(sets.map(a => s(a["Campaign key"])))], budget = P.camps.filter(c => keys.includes(c.key)).reduce((a,c) => a + (c.monthly||0), 0);
+  const cpa = (num(P.set["Target CPA – low"]) + num(P.set["Target CPA – high"])) / 2 || 265, need = num(P.set["Min trials to declare a winner"]) || 20, maxC = num(P.set["Max test concepts per month"]) || 3;
+  const n = sets.length, perC = budget / n / cpa, con = s(sets[0]["Test concept ID"]);
+  const hooks = P.variants.filter(v => s(v["Concept ID"]) === con && s(v.Element) === "Hook").length || 1, heads = P.variants.filter(v => s(v["Concept ID"]) === con && s(v.Element) === "Headline").length || 1;
+  const ci = poissonCI(perC), spendC = budget / n;
+  return { budget, cpa, n, maxC, need, perC, perHook: perC / hooks, perAd: perC / (hooks*heads), ads: n*hooks*heads, weeks: Math.ceil(need / perC * 4.33), lo: spendC / ci[1], hi: ci[0] ? spendC / ci[0] : Infinity };
+}
+
+/* ---------- 7. RENDER ---------- */
+const $ = id => document.getElementById(id);
+let STATE = { P:null, acct:null, files:null, filter:"all" }, downloads = null;
+function render(){
+  const P = STATE.P, draft = $("draft").checked, ctx = { acct:STATE.acct, files:STATE.files };
+  const raw = validate(P, ctx);
+  STATE.issues = raw.map(i => (draft && i.draft) ? {...i, level:"skip"} : (i.level === "error" && i.hold && i.plat !== "pmax") ? {...i, level:"hold"} : i);
+  const HD = new Set(); STATE.issues.filter(i => i.level === "hold").forEach(i => i.hold.forEach(h => HD.add(h)));
+  testAds(P).forEach(a => { if (HD.has("ad:"+s(a["Ad name"]))) HD.add("as:"+s(a["Ad set name"])); });   // keep the creative test balanced
+  const pmFiles = new Set(P.ags.filter(r => !isPause(r)).flatMap(r => { const a = pmaxAssets(P, r); return [...a.landscape,...a.square,...a.portrait,...a.logo,...a.logoWide,...a.video].map(l => l.file); }));
+  const pmCons = new Set(P.ags.flatMap(r => split(r["Concept IDs (; separated)"])));
+  const pmHeld = [...HD].filter(h => (h.startsWith("file:") && pmFiles.has(h.slice(5))) || (h.startsWith("concept:") && pmCons.has(h.slice(8)))).length;
+  STATE.HD = HD;
+  STATE.g = buildGoogle(P, HD); STATE.m = buildMeta(P, draft, HD);
+  STATE.s1 = buildPmax(P, STATE.acct, 1, draft); STATE.s2 = buildPmax(P, STATE.acct, 2, draft);
+  const errs = pl => STATE.issues.filter(i => i.level === "error" && (i.plat === pl || i.plat === "all")).length;
+  const eG = errs("google"), eM = errs("meta"), eP = errs("pmax") + pmHeld;
+  const E = STATE.issues.filter(i=>i.level==="error").length, W = STATE.issues.filter(i=>i.level==="warn").length, K = STATE.issues.filter(i=>i.level==="skip").length, HB = STATE.issues.filter(i=>i.level==="hold").length;
+
+  $("bars").innerHTML = ["Meta","Google"].map(pl => {
+    const cs = P.camps.filter(c => c.plat === pl), search = cs.filter(c => !c.pmax).reduce((a,c)=>a+(c.monthly||0),0), pmx = cs.filter(c => c.pmax).reduce((a,c)=>a+(c.monthly||0),0);
+    const extra = pl === "Meta" ? num(P.set["Meta conditional reserve (not built)"])||0 : 0, target = num(P.set[pl+" platform budget"]) || search+pmx+extra;
+    const sc = Math.max(target, search+pmx+extra) || 1, ok = Math.abs(search+pmx+extra-target) <= 1;
+    const daily = cs.map(c => `${c.key} $${fmt(c.daily)}/day`).join(" · ");
+    return `<div><div class="barhead"><span><b>${pl}</b></span><span style="color:var(--${ok?"ok":"warn"})"><b>$${fmt(search+pmx+extra)}</b> / $${fmt(target)} ${ok?"✓":"≠ brief"}</span></div>
+      <div class="bar"><span style="width:${search/sc*100}%;background:var(--${pl==="Meta"?"meta":"google"})"></span><span style="width:${pmx/sc*100}%;background:var(--pmax)"></span><span style="width:${extra/sc*100}%;background:var(--reserve)"></span></div>
+      <div class="meta" style="margin-top:3px">${esc(daily)}</div></div>`;
+  }).join("");
+  $("checks").innerHTML = `<div class="chk e"><b>${E}</b><span>blocking errors</span></div><div class="chk w"><b>${HB}</b><span>held back</span></div><div class="chk ${W?"w":"o"}"><b>${W}</b><span>warnings</span></div>`;
+  const tAds = testAds(P);
+  $("counts").textContent = `Google Search ${STATE.g.length} rows · PMax ${P.ags.filter(r=>!isPause(r)).length} new asset groups · Meta ${P.ads.length} always-on + ${tAds.length} test ads → ${STATE.m.length} rows`;
+
+  const ev = evidence(P);
+  if (ev){
+    $("evidence").innerHTML = [["Test budget",`$${fmt(ev.budget)}/mo`],["Concepts (max)",`${ev.n} (${ev.maxC})`],["Ads in the test",ev.ads],["Trials per concept / month",ev.perC.toFixed(1)],
+      ["… per hook",ev.perHook.toFixed(1)],["… per ad",ev.perAd.toFixed(1)],["Threshold to name a winner",`${ev.need} trials`],["Weeks to reach the threshold*",ev.weeks],["CPA range if a concept lands on target (90%)",`$${fmt(ev.lo)}–$${fmt(ev.hi)}`]].map(([a,b]) => `<span>${a}</span><b>${b}</b>`).join("");
+    const ok = ev.perC >= ev.need && ev.n <= ev.maxC;
+    $("verdict").className = "verdict" + (ok ? " ok" : "");
+    $("verdict").textContent = (ev.n > ev.maxC ? `Too many concepts: cut to ${ev.maxC}. ` : ok ? "Enough planned volume to reach the threshold this month. " :
+      `Even on target, a concept's month-1 CPA could read anywhere from $${fmt(ev.lo)} to $${fmt(ev.hi)}, so results stay directional. Hook and ad-level differences (≈${ev.perHook.toFixed(0)} and ≈${ev.perAd.toFixed(0)} trials) won't be conclusive. A low-volume ad isn't a loser. `) + `*Time to accumulate ${ev.need} trials at planned spend and target CPA: a volume threshold, not proof of significance.`;
+  }
+
+  // tree
+  $("tree").innerHTML = P.camps.map(c => {
+    let kids = "", tag = c.pmax ? "p" : c.plat === "Google" ? "g" : "m";
+    if (c.pmax) kids = P.ags.map(r => { const a = pmaxAssets(P, r), pause = isPause(r);
+      return pause ? `<div class="leaf"><b>${esc(r["Asset group"])}</b> · existing → Paused in Stage 2</div>` :
+        `<details><summary><span class="nm">${esc(r["Asset group"])}</span><span class="meta">${a.landscape.length}L · ${a.square.length}S · ${a.portrait.length}P img · ${a.logo.length+a.logoWide.length} logo · ${a.video.length} video · ${esc(r["Final URL path"])}</span></summary>${a.cons.map(x => `<div class="leaf">${esc(x)}</div>`).join("")}</details>`; }).join("");
+    else if (c.plat === "Google") kids = [...new Set([...P.kw,...P.rsa].filter(r => s(r["Campaign key"]) === c.key).map(r => s(r["Ad group"])))].map(ag => `<div class="leaf"><b>${esc(ag)}</b> · ${P.kw.filter(r => s(r["Campaign key"])===c.key && s(r["Ad group"])===ag).length} kw</div>`).join("");
+    else kids = P.adsets.filter(r => s(r["Campaign key"]) === c.key).map(as => {
+      const ads = [...P.ads, ...tAds].filter(a => s(a["Ad set name"]) === s(as["Ad set name"]));
+      return `<details><summary><span class="nm">${esc(as["Ad set name"])}</span><span class="meta">${ads.length} ads${s(as["Test concept ID"]) ? " · test" : ""}</span></summary>${ads.map(a => { const cr = metaCreative(P, a);
+        return `<div class="leaf"><b>${esc(a["Ad name"])}</b> → ${cr.feed ? esc(cr.feed.file) : '<span style="color:var(--err)">no file</span>'}${cr.story ? " + 9:16" : ""}</div>`; }).join("")}</details>`; }).join("");
+    return `<details ${c.pmax?"open":""}><summary><span class="tag ${tag}">${c.pmax?"PMAX":c.plat==="Google"?"G":"M"}</span><span class="nm">${esc(c.name)}</span><span class="meta">$${fmt(c.monthly)}/mo · $${fmt(c.daily)}/day${c.inPlace?" · edit in place":""}</span></summary>${kids}</details>`;
+  }).join("");
+  renderIssues();
+
+  // PMax panel
+  const pm = P.camps.find(c => c.pmax), fresh = P.ags.filter(r => !isPause(r)), old = P.ags.filter(r => isPause(r));
+  $("pmaxPanel").hidden = !pm;
+  if (pm){
+    $("pmaxGate").className = "gate" + (eP ? "" : " ok");
+    $("pmaxGate").textContent = eP ? `PMax files are blocked by ${eP} error${eP>1?"s":""} (see "What to fix"). Nothing below should be imported yet.` : `Checks passed against your Editor export: "${pm.name}" exists exactly once and will be edited, not created.`;
+    let cur = ""; if (STATE.acct){ const cc = col(STATE.acct,"Campaign"), bc = col(STATE.acct,"Budget"), r = bc && STATE.acct.rows.find(x => x[cc] === pm.name && s(x[bc])); if (r) cur = `$${r[bc]}/day → `; }
+    $("s1list").innerHTML = [`Campaign <b>${esc(pm.name)}</b>: <b>no changes</b>`, `${fresh.length} new asset groups, <b>Paused</b>: ${fresh.map(r => esc(r["Asset group"])).join(", ")}`,
+      `${P.sig.filter(x => s(x["Signal type"]) === "Search theme").length} search themes`, "Editor should propose <b>no new campaign</b>. If it does, stop."].map(x => `<li>${x}</li>`).join("");
+    $("s2list").innerHTML = [`Budget ${cur}<b>$${fmt(pm.daily)}/day</b> ($${fmt(pm.monthly)}/mo ÷ ${P.gdays})`, `Enable: ${fresh.map(r => esc(r["Asset group"])).join(", ")}`,
+      `Pause: ${old.map(r => esc(r["Asset group"])).join(", ") || "none listed"}`, "No other campaign settings change (bidding, targeting, tracking untouched)."].map(x => `<li>${x}</li>`).join("");
+    const ticks = [...document.querySelectorAll(".ck")].every(x => x.checked);
+    $("s1Btn").disabled = eP > 0; $("s2Btn").disabled = eP > 0 || !ticks;
+    const slots = [["Landscape 1.91:1","landscape"],["Square 1:1","square"],["Portrait 4:5","portrait"],["Logo 1:1","logo"],["Logo 4:1","logoWide"],["Video","video"]];
+    const at = fresh.map(r => [s(r["Asset group"]), pmaxAssets(P, r)]);
+    $("attachCount").textContent = `· ${at.reduce((a,[,x]) => a + slots.reduce((b,[,k]) => b + x[k].length, 0), 0)} files`;
+    $("attachTable").innerHTML = `<thead><tr><th>Asset group</th>${slots.map(([l]) => `<th>${l}</th>`).join("")}</tr></thead><tbody>${at.map(([n,x]) => `<tr><td>${esc(n)}</td>${slots.map(([,k]) => `<td class="${(["landscape","square","logo"].includes(k) && !x[k].length) ? "bad" : ""}">${x[k].map(l => esc(l.file)).join("<br>") || "—"}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  }
+
+  // file check table
+  const F = STATE.files;
+  $("fileCount").textContent = F ? `· ${Object.keys(F).length} files` : "· add files to check them";
+  $("fileTable").innerHTML = F ? `<thead><tr><th>File</th><th>In library</th><th>Size</th><th>Shape</th><th>Length</th><th>KB</th><th>Type</th></tr></thead><tbody>${Object.values(F).map(f => {
+    const l = P.lib.find(x => x.file === f.name), want = l && RATIO[l.ratio], got = f.w && f.h ? f.w/f.h : 0, shapeOk = want && Math.abs(got-want)/want <= 0.01;
+    return `<tr><td>${esc(f.name)}</td><td class="${l?"okc":"wn"}">${l ? l.ratio : "not listed"}</td><td>${f.w ? f.w+"×"+f.h : "?"}</td><td class="${l ? (shapeOk ? "okc" : "bad") : ""}">${got ? got.toFixed(2)+":1" : "?"}</td><td>${f.dur ? f.dur.toFixed(1)+"s" : "—"}</td><td>${fmt(f.bytes/1024)}</td><td class="${f.mimeMismatch ? "bad" : ""}">${esc(f.mime || "?")}</td></tr>`; }).join("")}</tbody>` : "";
+
+  // previews
+  const tbl = (id, rows) => { const cols = usedCols(rows); $(id).innerHTML = `<thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c])}</td>`).join("")}</tr>`).join("")}</tbody>`; };
+  tbl("gTable", STATE.g); tbl("mTable", STATE.m); $("gCount").textContent = `· ${STATE.g.length} rows`; $("mCount").textContent = `· ${STATE.m.length} rows`;
+  $("gBtn").disabled = eG > 0; $("mBtn").disabled = eM > 0;
+  const part = (n, e, l) => e ? `${l}: blocked by ${e} error${e>1?"s":""}.` : `${l}: ${n} rows ready.`;
+  const cnt = pre => [...HD].filter(h => h.startsWith(pre)).length;
+  const held = [["c:","campaigns"],["as:","ad sets"],["ad:","ads"],["ag:","ad groups"],["kw:","keywords"],["neg:","negatives"],["file:","files"]].map(([p,l]) => cnt(p) ? `${cnt(p)} ${l}` : "").filter(Boolean).join(", ");
+  $("msg").textContent = `${part(STATE.g.length,eG,"Google Search")} ${part(STATE.m.length,eM,"Meta")} ${eP ? `PMax: blocked by ${eP}.` : "PMax: ready (two stages)."}${held ? ` Held back (listed under What to fix): ${held}.` : ""}${draft ? " DRAFT: dry-run only." : ""}${K ? ` ${K} draft-only allowances.` : ""}`;
+}
+function renderIssues(){
+  const order = {error:0, hold:1, warn:2, skip:3}, list = STATE.issues.filter(i => STATE.filter === "all" || i.level === STATE.filter).sort((a,b) => order[a.level]-order[b.level]);
+  const tag = { google:"Search", pmax:"PMax", meta:"Meta", all:"All" };
+  $("issues").innerHTML = list.map(i => `<div class="iss ${i.level}"><span class="lv">${i.level==="error"?"ERROR":i.level==="hold"?"HELD BACK":i.level==="warn"?"WARN":"DRAFT"}</span><div><div>${esc(i.msg)}</div><div class="where">${tag[i.plat]} · ${esc(i.where)}</div></div></div>`).join("")
+    || `<p class="empty">${STATE.filter === "all" ? "No issues." : "Nothing in this filter."}</p>`;
+}
+
+/* ---------- wiring ---------- */
+function loadPlan(plan, label){ STATE.P = normalise(plan); $("srcLabel").textContent = label; render(); }
+$("sampleBtn").onclick = () => loadPlan(SAMPLE, "Sample plan · Dec 2026");
+$("fileIn").onchange = async e => { const f = e.target.files[0]; if (!f) return;
+  try { loadPlan(readWorkbook(await f.arrayBuffer()), f.name); } catch(err){ $("msg").textContent = "That file couldn't be read as a plan workbook. Save it as .xlsx and try again."; } e.target.value = ""; };
+$("acctIn").onchange = async e => { const f = e.target.files[0]; if (!f) return;
+  try { STATE.acct = readAccountExport(await f.arrayBuffer()); $("acctLabel").textContent = `${f.name} · ${STATE.acct.rows.length} rows`; render(); }
+  catch(err){ $("msg").textContent = "That export couldn't be read. Export from Google Ads Editor as CSV and try again."; } e.target.value = ""; };
+$("creaIn").onchange = async e => { const fs = [...e.target.files]; if (!fs.length) return; STATE.files = STATE.files || {};
+  for (const f of fs) STATE.files[f.name] = await readCreative(f);
+  $("filesLabel").textContent = `${Object.keys(STATE.files).length} creative files`; $("filePanel").open = true; render(); e.target.value = ""; };
+$("draft").onchange = render;
+document.querySelectorAll(".ck").forEach(x => x.onchange = render);
+document.querySelectorAll(".pill").forEach(b => b.onclick = () => { document.querySelectorAll(".pill").forEach(x => x.setAttribute("aria-pressed", x===b)); STATE.filter = b.dataset.f; renderIssues(); });
+async function save(prefix, rows, cols, next){
+  const name = `${prefix}_${s(STATE.P.set["Month code"])||"plan"}${$("draft").checked?"_DRAFT":""}.csv`, data = "﻿" + toText(rows, ",", cols);
+  if (!downloads){ // ordinary browser (GitHub Pages or a local file): plain download, text fallback if blocked
+    try { const a = document.createElement("a"), url = URL.createObjectURL(new Blob([data], {type:"text/csv;charset=utf-8"}));
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+      $("msg").textContent = `Downloaded ${name}. ${next}`; }
+    catch(err){ $("pasteBox").value = toText(rows, "\t", cols); $("pasteWrap").hidden = false; $("pasteWrap").open = true; $("msg").textContent = "Downloads are blocked here. The text version is below."; }
+    return; }
+  try { await downloads.save({filename:name, data}); $("msg").textContent = `Saved ${name}. ${next}`; }
+  catch(err){ $("msg").textContent = err && err.code === "declined" ? "Download cancelled." : "The download didn't go through. Try again."; }
+}
+$("gBtn").onclick = () => save("google_search", STATE.g, G_COLS, "Google Ads Editor → Account → Import → From file.");
+$("mapBtn").onclick = () => save("ad_map", buildAdMap(STATE.P), MAP_COLS, "Paste into IN_AdMap in the performance workbook.");
+$("mBtn").onclick = () => save("meta_bulk_import", STATE.m, M_COLS, "Upload creatives to Meta's media library, then Ads Manager → Import ads in bulk.");
+$("s1Btn").onclick = () => save("pmax_stage1", STATE.s1, pmaxOrder(STATE.s1), "Import, check Editor proposes no new campaign, attach assets, Post.");
+$("s2Btn").onclick = () => save("pmax_stage2", STATE.s2, pmaxOrder(STATE.s2), "Import, confirm the proposed changes match the Stage 2 list, then Post.");
+window.__gen = { buildAdMap, poissonCI, normalise, validate, buildGoogle, buildMeta, buildPmax, testAds, evidence, readAccountExport, mp4Info, toText, usedCols, pmaxOrder, M_COLS, G_COLS, get state(){ return STATE; } };
+loadPlan(SAMPLE, "Sample plan · Dec 2026");
+(async () => { try { downloads = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch { downloads = null; } })();
+</script>

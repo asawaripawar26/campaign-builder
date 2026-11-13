@@ -1,0 +1,13 @@
+{
+  "name": "campaign-builder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Turns a campaign plan workbook into Google Ads Editor and Meta bulk-import files, with safety checks.",
+  "scripts": {
+    "test": "node --test tests/generator.test.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0",
+    "xlsx": "0.18.5"
+  }
+}

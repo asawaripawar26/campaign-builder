@@ -1,0 +1,62 @@
+﻿Campaign,Campaign Type,Networks,Budget,Budget type,Bid Strategy Type,Target CPA,Languages,Location ID,Campaign Status,Start Date,End Date,Final URL suffix,Ad Group,Ad Group Status,Keyword,Criterion Type,Max CPC,Ad type,Final URL,Headline 1,Headline 2,Headline 3,Headline 4,Headline 5,Headline 6,Headline 7,Headline 8,Headline 9,Headline 10,Headline 11,Headline 12,Headline 13,Headline 14,Headline 15,Description 1,Description 2,Description 3,Description 4,Path 1,Path 2,Status
+GOOG_BRAND_Brand_US_202612,Search,Google search,296,Daily,Maximize conversions,,en,,Paused,2026-12-01,2026-12-31,utm_source=google&utm_medium=cpc&utm_campaign=GOOG_BRAND_Brand_US_202612&utm_term={keyword}&utm_content={creative},,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_BRAND_Brand_US_202612,,,,,,,,2840,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,Enabled,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,,agentstack,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,,agentstack ai,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,,agentstack pricing,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,,agentstack free trial,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,,agentstack reviews,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,,agentstack,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,Brand_Core,,,,,Responsive search ad,https://www.example.com/,AgentStack Official Site,Start Your Free Trial,AI Agents for Agencies,Automate Client SEO Work,Launch Agents in Minutes,Built for Marketing Teams,Try AgentStack Free,See AgentStack Pricing,,,,,,,,"Build and run AI agents for SEO, content and reporting. Start your free trial today.",Agencies use AgentStack to automate repetitive client work. See how it works.,Set up your first agent in minutes and scale across every client account.,,Official,Free-Trial,Enabled
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,,,login,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,,,sign in,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,,,support,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,,,careers,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_BRAND_Brand_US_202612,,,,,,,,,,,,,,,jobs,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,Search,Google search,954,Daily,Maximize conversions,290,en,,Paused,2026-12-01,2026-12-31,utm_source=google&utm_medium=cpc&utm_campaign=GOOG_NONBRAND_NonBrand_US_202612&utm_term={keyword}&utm_content={creative},,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,2840,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Agents_Agencies,Enabled,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Agents_Agencies,,ai agents for agencies,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Agents_Agencies,,ai agent platform for agencies,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Agents_Agencies,,ai automation for marketing agencies,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Agents_Agencies,,ai agents for marketing agencies,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Agents_Agencies,,agency ai automation software,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Agents_Agencies,,,,,Responsive search ad,https://www.example.com/trial/agencies,AI Agents for Agencies,Automate Client Deliverables,Scale Without New Hires,Start Your Free Trial,Built for Agency Teams,Agents for SEO and Content,Free Up Billable Hours,Try AgentStack Free,,,,,,,,Hand repetitive client work to AI agents and give your team time back for strategy.,"Audits, briefs and reports run on autopilot across every client. Start a free trial.",Built for agencies that want to grow output without growing headcount.,,Agencies,AI-Agents,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,Agentic_SEO,Enabled,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,Agentic_SEO,,agentic seo,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,Agentic_SEO,,ai seo agent,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,Agentic_SEO,,ai seo automation,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,Agentic_SEO,,ai seo automation tool,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,Agentic_SEO,,seo ai agent software,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,Agentic_SEO,,,,,Responsive search ad,https://www.example.com/trial/seo,AI Agents That Do SEO Work,Automate SEO Audits,Content Briefs in Minutes,Agentic SEO for Agencies,Rank Tracking on Autopilot,Start Your Free Trial,Try AgentStack Free,Built for SEO Teams,,,,,,,,"Let AI agents run technical audits, keyword research and content briefs for you.",Agentic SEO that works across every client site. Start your free trial today.,Spend less time on SEO busywork and more time on strategy that moves rankings.,,Agentic-SEO,Free-Trial,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Marketing_Automation,Enabled,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Marketing_Automation,,ai marketing agent,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Marketing_Automation,,ai marketing automation software,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Marketing_Automation,,ai workflow automation for marketing,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Marketing_Automation,,ai agent platform,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,AI_Marketing_Automation,,,,,Responsive search ad,https://www.example.com/trial,AI Marketing Agents,Automate Marketing Workflows,Build Agents Without Code,Start Your Free Trial,From Brief to Report Faster,Try AgentStack Free,Connect Your Marketing Stack,Launch Agents in Minutes,,,,,,,,"Create AI agents that handle research, content and reporting across your stack.",Automate the repetitive parts of marketing and keep your team on high-value work.,Start a free trial and launch your first marketing agent today.,,AI-Marketing,Agents,Enabled
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,jobs,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,careers,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,salary,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,course,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,certification,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,tutorial,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,github,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,open source,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,what is,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_NONBRAND_NonBrand_US_202612,,,,,,,,,,,,,,,agentstack,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,Search,Google search,164,Daily,Maximize conversions,,en,,Paused,2026-12-01,2026-12-31,utm_source=google&utm_medium=cpc&utm_campaign=GOOG_TEST_CompTest_US_202612&utm_term={keyword}&utm_content={creative},,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,2840,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,Competitor_Alternatives,Enabled,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,Competitor_Alternatives,,,,,Responsive search ad,https://www.example.com/compare,A Smarter Alternative,Compare AgentStack,See How We Compare,Built for Agency Workflows,Start Your Free Trial,Try AgentStack Free,AI Agents for Agencies,Switching Made Simple,,,,,,,,Looking for an alternative? See why agencies choose AgentStack for AI automation.,"Compare features side by side, then start a free trial and see the difference.","Purpose-built AI agents for SEO, content and client reporting.",,Compare,Alternatives,Enabled
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,Best_Platform,Enabled,,,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,Best_Platform,,best ai agent platform,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,Best_Platform,,best ai seo tools for agencies,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,Best_Platform,,ai agent software comparison,Exact,,,,,,,,,,,,,,,,,,,,,,,,,Enabled
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,Best_Platform,,,,,Responsive search ad,https://www.example.com/compare,Compare AI Agent Platforms,Built for Agency Workflows,AI Agents for SEO & Content,Start Your Free Trial,Try AgentStack Free,See How We Compare,Launch Agents in Minutes,AI Agents for Agencies,,,,,,,,Choosing an AI agent platform? Compare features built for agencies and SEO teams.,"See how AgentStack handles audits, briefs and reports, then start a free trial.","Purpose-built AI agents for SEO, content and client reporting.",,AI-Agents,Compare,Enabled
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,,,jobs,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,,,careers,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,,,course,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,,,free download,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
+GOOG_TEST_CompTest_US_202612,,,,,,,,,,,,,,,agentstack,Campaign Negative Phrase,,,,,,,,,,,,,,,,,,,,,,,,,
